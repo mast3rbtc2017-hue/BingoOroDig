@@ -26,7 +26,12 @@ export function Navbar() {
               </Link>
               <Link href="/profile">
                 <Button variant="ghost" className="text-white hover:bg-white/10">
-                  Profile
+                  Perfil
+                </Button>
+              </Link>
+              <Link href="/leaderboard">
+                <Button variant="ghost" className="text-white hover:bg-white/10">
+                  Ranking
                 </Button>
               </Link>
               {user.role === 'admin' && (
@@ -37,19 +42,19 @@ export function Navbar() {
                 </Link>
               )}
               <Button variant="secondary" onClick={() => logout()}>
-                Logout
+                Salir
               </Button>
             </>
           ) : (
             <>
               <Link href="/login">
                 <Button variant="ghost" className="text-white hover:bg-white/10">
-                  Log in
+                  Iniciar Sesión
                 </Button>
               </Link>
               <Link href="/register">
                 <Button className="bg-primary text-primary-foreground hover:bg-accent font-bold">
-                  Play Now
+                  Jugar Ahora
                 </Button>
               </Link>
             </>

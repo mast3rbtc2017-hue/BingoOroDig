@@ -16,18 +16,18 @@ export default function AdminDashboard() {
       <main className="flex-1 container mx-auto px-4 py-12">
         <div className="flex items-center justify-between mb-12">
           <div>
-            <h1 className="text-4xl font-serif font-bold text-white mb-2">Admin Dashboard</h1>
-            <p className="text-white/60">Overview of the entire platform</p>
+            <h1 className="text-4xl font-serif font-bold text-white mb-2">Panel de Administración</h1>
+            <p className="text-white/60">Resumen general de la plataforma</p>
           </div>
           <div className="flex gap-4">
             <Link href="/admin/rooms">
-              <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-black">Manage Rooms</Button>
+              <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-black">Gestionar Salas</Button>
             </Link>
             <Link href="/admin/users">
-              <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-black">Manage Users</Button>
+              <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-black">Gestionar Usuarios</Button>
             </Link>
             <Link href="/admin/games">
-              <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-black">Game Control</Button>
+              <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-black">Control de Partidas</Button>
             </Link>
           </div>
         </div>
@@ -41,10 +41,10 @@ export default function AdminDashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {[
-              { label: "Total Users", value: stats?.totalUsers || 0, icon: Users },
-              { label: "Active Games", value: stats?.activeGames || 0, icon: Gamepad2 },
-              { label: "Total Rooms", value: stats?.totalRooms || 0, icon: Presentation },
-              { label: "Revenue", value: `$${stats?.totalRevenue || 0}`, icon: Coins },
+              { label: "Total Usuarios", value: stats?.totalUsers || 0, icon: Users },
+              { label: "Partidas Activas", value: stats?.activeGames || 0, icon: Gamepad2 },
+              { label: "Total Salas", value: stats?.totalRooms || 0, icon: Presentation },
+              { label: "Ingresos", value: `$${stats?.totalRevenue || 0}`, icon: Coins },
             ].map((stat, i) => (
               <motion.div
                 key={i}
