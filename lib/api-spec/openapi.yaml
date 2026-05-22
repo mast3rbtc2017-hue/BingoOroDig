@@ -1,22 +1,37 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Bingo OroDig API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: rooms
+    description: Bingo rooms
+  - name: games
+    description: Bingo games
+  - name: cards
+    description: Bingo cards
+  - name: chat
+    description: Chat messages
+  - name: transactions
+    description: Saldo transactions
+  - name: stats
+    description: Dashboard statistics
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +39,973 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: OK
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}/balance:
+    patch:
+      operationId: updateUserBalance
+      tags: [users]
+      summary: Update user balance (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BalanceUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}/block:
+    patch:
+      operationId: toggleBlockUser
+      tags: [users]
+      summary: Block/unblock user (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlockToggle"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /rooms:
+    get:
+      operationId: listRooms
+      tags: [rooms]
+      summary: List bingo rooms
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+
+    post:
+      operationId: createRoom
+      tags: [rooms]
+      summary: Create a bingo room (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+
+  /rooms/{id}:
+    get:
+      operationId: getRoom
+      tags: [rooms]
+      summary: Get room by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateRoom
+      tags: [rooms]
+      summary: Update a room (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoomUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+
+    delete:
+      operationId: deleteRoom
+      tags: [rooms]
+      summary: Delete a room (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /games:
+    get:
+      operationId: listGames
+      tags: [games]
+      summary: List games
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Game"
+
+    post:
+      operationId: createGame
+      tags: [games]
+      summary: Create a game (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Game"
+
+  /games/{id}:
+    get:
+      operationId: getGame
+      tags: [games]
+      summary: Get game by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Game"
+        "404":
+          description: Not found
+
+  /games/{id}/control:
+    post:
+      operationId: controlGame
+      tags: [games]
+      summary: Control game state (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameControl"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Game"
+
+  /games/{id}/draw:
+    post:
+      operationId: drawNumber
+      tags: [games]
+      summary: Draw next ball (admin/auto)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrawnNumber"
+
+  /games/{id}/numbers:
+    get:
+      operationId: getDrawnNumbers
+      tags: [games]
+      summary: Get all drawn numbers for a game
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DrawnNumber"
+
+  /games/{id}/winners:
+    get:
+      operationId: getGameWinners
+      tags: [games]
+      summary: Get winners for a game
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Winner"
+
+  /cards:
+    get:
+      operationId: listMyCards
+      tags: [cards]
+      summary: Get my bingo cards
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Card"
+
+    post:
+      operationId: buyCard
+      tags: [cards]
+      summary: Buy a bingo card
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CardPurchase"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+
+  /cards/{id}:
+    get:
+      operationId: getCard
+      tags: [cards]
+      summary: Get card by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+
+  /cards/{id}/claim:
+    post:
+      operationId: claimBingo
+      tags: [cards]
+      summary: Claim bingo on a card
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BingoClaim"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Winner"
+        "400":
+          description: Invalid claim
+
+  /chat/{roomId}:
+    get:
+      operationId: getChatMessages
+      tags: [chat]
+      summary: Get chat messages for room
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a chat message
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+
+  /transactions:
+    get:
+      operationId: listMyTransactions
+      tags: [transactions]
+      summary: Get my transactions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+
+  /stats/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [stats]
+      summary: Get admin dashboard statistics
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /stats/leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [stats]
+      summary: Get winner leaderboard
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    RegisterInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+        password:
+          type: string
+          minLength: 6
+        displayName:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      required: [id, username, role, balance, isBlocked, createdAt]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [admin, moderator, player]
+        balance:
+          type: number
+        isBlocked:
+          type: boolean
+        totalWins:
+          type: integer
+        totalGamesPlayed:
+          type: integer
+        createdAt:
+          type: string
+
+    UserUpdate:
+      type: object
+      properties:
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+        role:
+          type: string
+          enum: [admin, moderator, player]
+
+    BalanceUpdate:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+        reason:
+          type: string
+
+    BlockToggle:
+      type: object
+      required: [isBlocked]
+      properties:
+        isBlocked:
+          type: boolean
+
+    Room:
+      type: object
+      required: [id, name, type, status, cardPrice, maxPlayers, ballInterval, prize, patternType, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [classic, fast, vip, automatic]
+        status:
+          type: string
+          enum: [active, inactive, playing]
+        cardPrice:
+          type: number
+        maxPlayers:
+          type: integer
+        ballInterval:
+          type: integer
+        prize:
+          type: number
+        patternType:
+          type: string
+          enum: [line, fullCard, corners, x, diagonal]
+        playerCount:
+          type: integer
+        currentGameId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    RoomInput:
+      type: object
+      required: [name, type, cardPrice, maxPlayers, ballInterval, prize, patternType]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [classic, fast, vip, automatic]
+        cardPrice:
+          type: number
+        maxPlayers:
+          type: integer
+        ballInterval:
+          type: integer
+        prize:
+          type: number
+        patternType:
+          type: string
+          enum: [line, fullCard, corners, x, diagonal]
+
+    RoomUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [classic, fast, vip, automatic]
+        status:
+          type: string
+          enum: [active, inactive, playing]
+        cardPrice:
+          type: number
+        maxPlayers:
+          type: integer
+        ballInterval:
+          type: integer
+        prize:
+          type: number
+        patternType:
+          type: string
+          enum: [line, fullCard, corners, x, diagonal]
+
+    Game:
+      type: object
+      required: [id, roomId, status, patternType, ballInterval, prize, createdAt]
+      properties:
+        id:
+          type: integer
+        roomId:
+          type: integer
+        status:
+          type: string
+          enum: [waiting, playing, paused, finished]
+        patternType:
+          type: string
+          enum: [line, fullCard, corners, x, diagonal]
+        ballInterval:
+          type: integer
+        prize:
+          type: number
+        winnerId:
+          type: ["integer", "null"]
+        winnerCardId:
+          type: ["integer", "null"]
+        startedAt:
+          type: ["string", "null"]
+        finishedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    GameInput:
+      type: object
+      required: [roomId]
+      properties:
+        roomId:
+          type: integer
+        patternType:
+          type: string
+          enum: [line, fullCard, corners, x, diagonal]
+        prize:
+          type: number
+        ballInterval:
+          type: integer
+
+    GameControl:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [start, pause, resume, finish, restart]
+
+    DrawnNumber:
+      type: object
+      required: [id, gameId, number, letter, drawnAt]
+      properties:
+        id:
+          type: integer
+        gameId:
+          type: integer
+        number:
+          type: integer
+        letter:
+          type: string
+        drawnAt:
+          type: string
+
+    Winner:
+      type: object
+      required: [id, gameId, userId, cardId, pattern, prize, createdAt]
+      properties:
+        id:
+          type: integer
+        gameId:
+          type: integer
+        userId:
+          type: integer
+        cardId:
+          type: integer
+        username:
+          type: string
+        pattern:
+          type: string
+        prize:
+          type: number
+        createdAt:
+          type: string
+
+    Card:
+      type: object
+      required: [id, userId, gameId, numbers, isWinner, purchasedAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        gameId:
+          type: integer
+        roomId:
+          type: integer
+        numbers:
+          type: string
+          description: JSON string of 5x5 grid
+        markedNumbers:
+          type: string
+          description: JSON array of marked numbers
+        isWinner:
+          type: boolean
+        colorTheme:
+          type: string
+        purchasedAt:
+          type: string
+
+    CardPurchase:
+      type: object
+      required: [gameId]
+      properties:
+        gameId:
+          type: integer
+        quantity:
+          type: integer
+
+    BingoClaim:
+      type: object
+      required: [pattern]
+      properties:
+        pattern:
+          type: string
+          enum: [line, fullCard, corners, x, diagonal]
+
+    ChatMessage:
+      type: object
+      required: [id, roomId, userId, username, content, type, createdAt]
+      properties:
+        id:
+          type: integer
+        roomId:
+          type: integer
+        userId:
+          type: integer
+        username:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        content:
+          type: string
+        type:
+          type: string
+          enum: [user, system, winner]
+        createdAt:
+          type: string
+
+    ChatInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 200
+
+    Transaction:
+      type: object
+      required: [id, userId, type, amount, description, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+          enum: [deposit, withdrawal, purchase, prize]
+        amount:
+          type: number
+        description:
+          type: string
+        createdAt:
+          type: string
+
+    DashboardStats:
+      type: object
+      required: [totalUsers, onlineUsers, activeGames, totalRooms, totalCardsToday, totalPrizesToday, totalRevenue]
+      properties:
+        totalUsers:
+          type: integer
+        onlineUsers:
+          type: integer
+        activeGames:
+          type: integer
+        totalRooms:
+          type: integer
+        totalCardsToday:
+          type: integer
+        totalPrizesToday:
+          type: number
+        totalRevenue:
+          type: number
+        recentWinners:
+          type: array
+          items:
+            $ref: "#/components/schemas/Winner"
+
+    LeaderboardEntry:
+      type: object
+      required: [userId, username, totalWins, totalPrize, rank]
+      properties:
+        userId:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        totalWins:
+          type: integer
+        totalPrize:
+          type: number
+        rank:
+          type: integer

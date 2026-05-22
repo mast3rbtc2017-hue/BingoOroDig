@@ -1,0 +1,341 @@
+Crea una plataforma web COMPLETA y FUNCIONAL llamada “Bingo OroDig”, un sistema de bingo virtual moderno, profesional, visualmente atractivo y totalmente responsive para móviles y PC. El proyecto debe ejecutarse COMPLETAMENTE dentro de Replit SIN depender de servicios externos, APIs pagas ni integraciones de terceros. Todo debe funcionar localmente dentro del entorno de Replit usando almacenamiento interno.
+
+STACK:
+- Frontend: React + Vite
+- Backend: Node.js + Express
+- Base de datos local: SQLite
+- WebSockets: Socket.io para tiempo real
+- Diseño moderno premium con animaciones suaves
+- Colores elegantes: negro, dorado, blanco y tonos oscuros premium
+- UI estilo casino moderno y elegante
+- Todo en un solo proyecto listo para ejecutar con npm install y npm run dev
+
+OBJETIVO:
+Crear un bingo virtual profesional donde múltiples usuarios puedan entrar a salas, comprar cartones virtuales, participar en partidas en tiempo real y ganar automáticamente cuando completen patrones válidos.
+
+========================
+FUNCIONES PRINCIPALES
+========================
+
+1. SISTEMA DE USUARIOS
+- Registro e inicio de sesión
+- Login con usuario y contraseña
+- Sesiones persistentes
+- Roles:
+  - Administrador
+  - Moderador
+  - Jugador
+- Perfil de usuario:
+  - Foto/avatar
+  - Nombre
+  - Saldo virtual
+  - Historial de partidas
+  - Cartones comprados
+  - Premios ganados
+
+========================
+2. PANEL ADMINISTRADOR
+========================
+
+Crear un panel administrativo COMPLETO con:
+
+- Dashboard moderno con estadísticas:
+  - Usuarios conectados
+  - Bingos activos
+  - Ventas de cartones
+  - Premios entregados
+  - Ganancias virtuales
+
+- Gestión de salas de bingo
+  - Crear sala
+  - Editar sala
+  - Eliminar sala
+  - Activar/desactivar
+
+- Configuración de partidas:
+  - Nombre del bingo
+  - Precio del cartón
+  - Cantidad máxima de jugadores
+  - Tiempo entre bolas
+  - Premio total
+  - Tipo de patrón ganador
+  - Hora de inicio
+
+- Control manual del juego:
+  - Iniciar partida
+  - Pausar
+  - Reanudar
+  - Finalizar
+  - Cantar bolas manualmente
+  - Reiniciar partida
+
+- Gestión de usuarios:
+  - Ver jugadores
+  - Bloquear usuarios
+  - Editar saldo
+  - Historial de actividad
+
+- Historial de partidas:
+  - Ganadores
+  - Premios
+  - Cartones
+  - Números cantados
+  - Hora
+
+========================
+3. SISTEMA DE BINGO EN TIEMPO REAL
+========================
+
+- Uso de Socket.io para tiempo real
+- Los jugadores deben ver:
+  - Números cantados instantáneamente
+  - Cartones marcados automáticamente
+  - Jugadores conectados
+  - Temporizador
+  - Estado de la partida
+
+- Animación espectacular al salir cada bola:
+  - Bola girando
+  - Efectos dorados
+  - Sonidos opcionales locales
+  - Historial visual de números cantados
+
+- Sistema automático de generación de números:
+  - Letras B I N G O
+  - Distribución real:
+    B = 1-15
+    I = 16-30
+    N = 31-45
+    G = 46-60
+    O = 61-75
+
+- Evitar números repetidos
+
+========================
+4. CARTONES VIRTUALES
+========================
+
+- Generación automática de cartones únicos
+- Diseño elegante y grande para móviles
+- Marcado automático al salir el número
+- También permitir marcado manual opcional
+- Mostrar:
+  - Cartones activos
+  - Cartones ganadores
+  - Cartones comprados
+
+- Diferentes colores por cartón
+- Animaciones cuando un número coincide
+
+========================
+5. VALIDACIÓN AUTOMÁTICA DE GANADORES
+========================
+
+Implementar validación automática de:
+- Línea horizontal
+- Línea vertical
+- Diagonal
+- Cuatro esquinas
+- Letra X
+- Cartón lleno
+
+El sistema debe:
+- Detectar automáticamente ganador
+- Validar que el cartón sea correcto
+- Mostrar modal gigante de ganador
+- Reproducir efectos visuales
+- Guardar historial
+
+========================
+6. SALAS DE BINGO
+========================
+
+Crear múltiples salas:
+- Sala clásica
+- Sala rápida
+- Sala VIP
+- Sala automática
+
+Cada sala debe tener:
+- Chat en vivo
+- Lista de jugadores
+- Estado actual
+- Premio acumulado
+- Tiempo restante
+
+========================
+7. CHAT EN VIVO
+========================
+
+- Chat en tiempo real por sala
+- Emojis
+- Mensajes del sistema
+- Moderación
+- Silenciar usuarios
+- Mostrar cuando alguien gana
+
+========================
+8. SISTEMA DE SALDO VIRTUAL
+========================
+
+Crear sistema interno SIN pagos reales:
+- El administrador puede recargar saldo manualmente
+- Los usuarios usan saldo para comprar cartones
+- Descontar automáticamente
+- Mostrar historial de movimientos
+
+========================
+9. INTERFAZ PREMIUM
+========================
+
+DISEÑO:
+- Estilo casino moderno
+- Fondo oscuro elegante
+- Dorado brillante premium
+- Animaciones suaves
+- Glassmorphism
+- Sombras elegantes
+- Componentes modernos
+
+Debe incluir:
+- Landing page impresionante
+- Hero section animado
+- Estadísticas falsas visuales
+- Botones brillantes
+- Efectos hover
+- Animaciones de entrada
+
+========================
+10. SONIDOS Y EFECTOS
+========================
+
+Agregar:
+- Sonido al cantar número
+- Sonido de victoria
+- Efectos visuales
+- Confeti al ganar
+- Luces doradas animadas
+
+Todos los sonidos deben ser archivos locales dentro del proyecto.
+
+========================
+11. RESPONSIVE TOTAL
+========================
+
+Optimizar PERFECTAMENTE para:
+- Celulares
+- Tablets
+- Computadoras
+- Pantallas pequeñas
+
+En móvil:
+- Cartones grandes
+- Botones táctiles
+- Navegación inferior
+- Interfaz cómoda
+
+========================
+12. SEGURIDAD
+========================
+
+Implementar:
+- JWT local
+- Protección de rutas
+- Validación backend
+- Anti spam chat
+- Prevención de doble ganador
+- Sanitización básica
+
+========================
+13. BASE DE DATOS SQLITE
+========================
+
+Crear tablas:
+- users
+- bingo_rooms
+- bingo_games
+- bingo_cards
+- transactions
+- winners
+- messages
+- drawn_numbers
+
+========================
+14. FUNCIONES AVANZADAS
+========================
+
+Agregar:
+- Modo automático
+- Temporizador de partida
+- Cuenta regresiva
+- Tabla de líderes
+- Ranking de ganadores
+- Modo oscuro premium
+- Notificaciones visuales
+- Música opcional local
+- Estadísticas de usuario
+
+========================
+15. EXPERIENCIA VISUAL
+========================
+
+Quiero una experiencia extremadamente visual:
+- Animaciones modernas
+- Transiciones suaves
+- Componentes premium
+- Diseño tipo app profesional
+- Sensación real de casino online
+
+========================
+16. ESTRUCTURA DEL PROYECTO
+========================
+
+Organizar:
+- frontend/
+- backend/
+- database/
+- public/
+- sounds/
+- assets/
+
+========================
+17. IMPORTANTE
+========================
+
+- TODO debe funcionar localmente en Replit
+- NO usar Firebase
+- NO usar Supabase
+- NO usar Stripe
+- NO usar APIs externas
+- NO usar servicios pagos
+- Todo debe ejecutarse directamente
+- El proyecto debe quedar listo para probar inmediatamente
+
+========================
+18. EXTRA
+========================
+
+Crear usuarios demo automáticamente:
+ADMIN:
+usuario: admin
+password: admin123
+
+JUGADOR:
+usuario: jugador
+password: 123456
+
+========================
+19. ENTREGA
+========================
+
+Generar:
+- Código limpio
+- Comentarios importantes
+- Scripts de inicio
+- Base de datos inicial
+- Datos demo
+- README completo
+- Diseño impresionante
+- Sistema totalmente funcional
+
+Quiero que el resultado parezca una plataforma real de bingo online profesional y moderna, visualmente impactante y lista para demostraciones.

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Bingo OroDig"
+version = "1.0.0"
+id = "artifacts/bingo-orodig"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20969
+
+[services.development]
+run = "pnpm --filter @workspace/bingo-orodig run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bingo-orodig", "run", "build" ]
+publicDir = "artifacts/bingo-orodig/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20969"
+BASE_PATH = "/"
