@@ -1,5 +1,6 @@
 import { useGetLeaderboard } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
+import { MobileNav } from "@/components/layout/MobileNav";
 import { motion } from "framer-motion";
 import { Trophy, Medal, Star } from "lucide-react";
 
@@ -90,6 +91,7 @@ export default function Leaderboard() {
           )}
         </div>
       </main>
+      <MobileNav />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Navbar } from "@/components/layout/Navbar";
+import { MobileNav } from "@/components/layout/MobileNav";
 import { useListMyTransactions, useListMyCards } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -188,6 +189,7 @@ export default function Profile() {
 
         </div>
       </main>
+      <MobileNav />
     </div>
   );
 }
