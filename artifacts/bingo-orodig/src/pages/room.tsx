@@ -158,7 +158,7 @@ export default function Room() {
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
-    sendChatMutation.mutate({ data: { content: chatInput } }, { onSuccess: () => setChatInput("") });
+    sendChatMutation.mutate({ roomId, data: { content: chatInput } }, { onSuccess: () => setChatInput("") });
   };
 
   const currentBall = allDrawn.length > 0 ? allDrawn[allDrawn.length - 1] : null;
