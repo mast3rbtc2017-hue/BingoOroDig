@@ -4,7 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { BuyCardBody, GetCardParams, ClaimBingoParams, ClaimBingoBody } from "@workspace/api-zod";
 import { generateCard, validatePattern, nextColorTheme } from "../lib/bingo";
-import { emitWinner, emitChatMessage } from "../lib/socket";
+import { emitWinner } from "../lib/socket";
 
 const router: IRouter = Router();
 
@@ -36,13 +36,19 @@ router.post("/cards", requireAuth, async (req: any, res): Promise<void> => {
 
   const [game] = await db.select().from(gamesTable).where(eq(gamesTable.id, body.data.gameId));
   if (!game) {
-    res.status(404).json({ error: "Game not found" });
+    res.status(404).json({ error: "Partida no encontrada" });
+    return;
+  }
+
+  // Allow purchase in waiting OR playing state
+  if (game.status === "finished" || game.status === "paused") {
+    res.status(400).json({ error: "La partida no acepta nuevos cartones en este momento" });
     return;
   }
 
   const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, game.roomId));
   if (!room) {
-    res.status(404).json({ error: "Room not found" });
+    res.status(404).json({ error: "Sala no encontrada" });
     return;
   }
 
@@ -51,17 +57,16 @@ router.post("/cards", requireAuth, async (req: any, res): Promise<void> => {
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId));
   if (!user || user.balance < totalCost) {
-    res.status(400).json({ error: "Insufficient balance" });
+    res.status(400).json({ error: "Saldo insuficiente" });
     return;
   }
 
-  // Deduct balance
   await db.update(usersTable).set({ balance: user.balance - totalCost }).where(eq(usersTable.id, req.userId));
   await db.insert(transactionsTable).values({
     userId: req.userId,
     type: "purchase",
     amount: totalCost,
-    description: `Compra de ${qty} carton(es) - Sala ${room.name}`,
+    description: `Compra de ${qty} cartón(es) — Sala ${room.name}`,
   });
 
   const cards = [];
@@ -93,7 +98,7 @@ router.get("/cards/:id", requireAuth, async (req: any, res): Promise<void> => {
     eq(cardsTable.userId, req.userId),
   ));
   if (!card) {
-    res.status(404).json({ error: "Card not found" });
+    res.status(404).json({ error: "Cartón no encontrado" });
     return;
   }
   res.json(serializeCard(card));
@@ -103,7 +108,7 @@ router.post("/cards/:id/claim", requireAuth, async (req: any, res): Promise<void
   const params = ClaimBingoParams.safeParse(req.params);
   const body = ClaimBingoBody.safeParse(req.body);
   if (!params.success || !body.success) {
-    res.status(400).json({ error: "Invalid request" });
+    res.status(400).json({ error: "Solicitud inválida" });
     return;
   }
 
@@ -112,32 +117,39 @@ router.post("/cards/:id/claim", requireAuth, async (req: any, res): Promise<void
     eq(cardsTable.userId, req.userId),
   ));
   if (!card) {
-    res.status(404).json({ error: "Card not found" });
+    res.status(404).json({ error: "Cartón no encontrado" });
     return;
   }
   if (card.isWinner) {
-    res.status(400).json({ error: "Already claimed" });
+    res.status(400).json({ error: "Ya reclamado" });
     return;
   }
 
   const [game] = await db.select().from(gamesTable).where(eq(gamesTable.id, card.gameId));
   if (!game || game.status !== "playing") {
-    res.status(400).json({ error: "Game not active" });
+    res.status(400).json({ error: "La partida no está activa" });
     return;
   }
+
+  // Get all drawn numbers for server-side validation
+  const drawnRows = await db.select().from(drawnNumbersTable).where(eq(drawnNumbersTable.gameId, game.id));
+  const drawnNums = drawnRows.map(d => d.number);
 
   const grid: number[][] = JSON.parse(card.numbers);
-  const markedNums: number[] = JSON.parse(card.markedNumbers || "[]");
 
-  const valid = validatePattern(grid, markedNums, body.data.pattern as any);
+  const valid = validatePattern(grid, drawnNums, body.data.pattern as any);
   if (!valid) {
-    res.status(400).json({ error: "Invalid bingo claim" });
+    res.status(400).json({ error: "¡El patrón de bingo no es válido aún!" });
     return;
   }
 
-  // Mark winner
   await db.update(cardsTable).set({ isWinner: true }).where(eq(cardsTable.id, card.id));
-  await db.update(gamesTable).set({ winnerId: req.userId, winnerCardId: card.id, status: "finished", finishedAt: new Date() }).where(eq(gamesTable.id, game.id));
+  await db.update(gamesTable).set({
+    winnerId: req.userId,
+    winnerCardId: card.id,
+    status: "finished",
+    finishedAt: new Date(),
+  }).where(eq(gamesTable.id, game.id));
   await db.update(roomsTable).set({ status: "active", currentGameId: null }).where(eq(roomsTable.id, game.roomId));
 
   const [winner] = await db.insert(winnersTable).values({
@@ -148,7 +160,6 @@ router.post("/cards/:id/claim", requireAuth, async (req: any, res): Promise<void
     prize: game.prize,
   }).returning();
 
-  // Credit prize
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId));
   if (user) {
     await db.update(usersTable).set({
@@ -159,7 +170,7 @@ router.post("/cards/:id/claim", requireAuth, async (req: any, res): Promise<void
       userId: req.userId,
       type: "prize",
       amount: game.prize,
-      description: `Premio BINGO - ${body.data.pattern}`,
+      description: `¡BINGO! Premio — patrón ${body.data.pattern}`,
     });
 
     emitWinner(game.roomId, {
@@ -177,7 +188,7 @@ router.post("/cards/:id/claim", requireAuth, async (req: any, res): Promise<void
     gameId: winner.gameId,
     userId: winner.userId,
     cardId: winner.cardId,
-    username: user?.username ?? "Unknown",
+    username: user?.username ?? "Desconocido",
     pattern: winner.pattern,
     prize: winner.prize,
     createdAt: winner.createdAt instanceof Date ? winner.createdAt.toISOString() : winner.createdAt,
