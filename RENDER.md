@@ -1,5 +1,7 @@
 # Desplegar la API en Render (gratis) + web en Firebase
 
+Repositorio: **https://github.com/mast3rbtc2017-hue/BingoOroDig**
+
 Arquitectura:
 
 | Parte | Dónde | URL |
@@ -22,10 +24,11 @@ Arquitectura:
 
 ## Parte 2 — Crear el servicio en Render (10 min)
 
-1. Entra en [render.com](https://render.com) y crea cuenta (gratis).
-2. **New +** → **Web Service**.
-3. Conecta tu repositorio **Bingo-OroDig** (GitHub/GitLab).
-4. Render detectará `render.yaml` o configura manualmente:
+1. Entra en [render.com](https://render.com) (cuenta ya creada).
+2. **New +** → **Blueprint** (recomendado) o **Web Service**.
+3. Conecta GitHub y elige el repo **`mast3rbtc2017-hue/BingoOroDig`**.
+4. Si usas **Blueprint**, Render lee `render.yaml` y crea `bingoorodig-api` solo.
+5. Si usas **Web Service** manual, configura:
 
 | Campo | Valor |
 |-------|--------|
