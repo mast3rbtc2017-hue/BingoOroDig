@@ -108,8 +108,9 @@ function initAdmin(): App {
     return appInstance;
   } catch (e) {
     initError = e instanceof Error ? e.message : String(e);
-    console.error("[firebase] Init failed:", initError);
-    throw e;
+    console.error("[firebase] Init failed (API will run degraded):", initError);
+    appInstance = initializeApp({ projectId });
+    return appInstance;
   }
 }
 
@@ -188,13 +189,4 @@ export function toIso(value: unknown): string {
   if (value instanceof Timestamp) return value.toDate().toISOString();
   if (value instanceof Date) return value.toISOString();
   return String(value);
-}
-
-// Initialize on boot so Render logs show credential problems early.
-try {
-  initAdmin();
-  getDb();
-  getAdminAuth();
-} catch (e) {
-  console.error("[firebase] Startup initialization failed:", e);
 }
