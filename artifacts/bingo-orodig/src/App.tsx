@@ -18,6 +18,8 @@ import AdminGames from "./pages/admin/games";
 import AdminUsers from "./pages/admin/users";
 import AdminSorteos from "./pages/admin/sorteos";
 import AdminSorteosLive from "./pages/admin/sorteos-live";
+import Roulette from "./pages/roulette";
+import AdminRoulette from "./pages/admin/roulette";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +55,7 @@ function Router() {
       <Route path="/lobby"><ProtectedRoute component={Lobby} /></Route>
       <Route path="/room/:id"><ProtectedRoute component={Room} /></Route>
       <Route path="/profile"><ProtectedRoute component={Profile} /></Route>
+      <Route path="/roulette"><ProtectedRoute component={Roulette} /></Route>
       
       <Route path="/admin"><ProtectedRoute component={AdminDashboard} adminOnly /></Route>
       <Route path="/admin/rooms"><ProtectedRoute component={AdminRooms} adminOnly /></Route>
@@ -61,6 +64,7 @@ function Router() {
       <Route path="/admin/sorteos/nuevo"><ProtectedRoute component={() => <AdminSorteos autoCreate />} adminOnly /></Route>
       <Route path="/admin/sorteos/:id/live"><ProtectedRoute component={AdminSorteosLive} adminOnly /></Route>
       <Route path="/admin/sorteos"><ProtectedRoute component={AdminSorteos} adminOnly /></Route>
+      <Route path="/admin/roulette"><ProtectedRoute component={AdminRoulette} adminOnly /></Route>
       
       <Route component={NotFound} />
     </Switch>

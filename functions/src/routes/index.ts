@@ -8,6 +8,7 @@ import cardsRouter from "./cards";
 import chatRouter from "./chat";
 import transactionsRouter from "./transactions";
 import statsRouter from "./stats";
+import rouletteRouter from "./roulette";
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use(cardsRouter);
 router.use(chatRouter);
 router.use(transactionsRouter);
 router.use(statsRouter);
+router.use(rouletteRouter);
 
 export default router;

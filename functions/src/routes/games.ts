@@ -21,6 +21,7 @@ import {
   rejectBingoClaim,
   serializeBingoClaim,
 } from "../lib/bingoClaims";
+import { recordBingoGameFinished } from "../lib/roulette";
 
 const router = Router();
 
@@ -55,6 +56,7 @@ router.post("/games", requireAdmin, async (req, res) => {
       .doc(String(room.currentGameId))
       .update({ status: "finished", finishedAt: FieldValue.serverTimestamp() });
     stopAutoTimer(room.currentGameId as number);
+    await recordBingoGameFinished();
   }
 
   const gameId = await nextId("games");
@@ -204,6 +206,7 @@ router.post("/games/:id/control", requireAdmin, async (req, res) => {
         currentGameId: null,
         updatedAt: FieldValue.serverTimestamp(),
       });
+      await recordBingoGameFinished();
       break;
     case "restart": {
       const drawn = await db.collection("games").doc(String(id)).collection("drawnNumbers").get();

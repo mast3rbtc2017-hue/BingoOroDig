@@ -67,5 +67,15 @@ service cloud.firestore {
     match /_counters/{id} {
       allow read, write: if false;
     }
+
+    match /settings/roulette {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /rouletteSpins/{spinId} {
+      allow read: if signedIn() && (resource.data.userUid == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
   }
 }

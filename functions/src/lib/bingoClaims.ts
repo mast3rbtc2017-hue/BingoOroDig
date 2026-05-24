@@ -1,4 +1,5 @@
 import { db, FieldValue, nextId, Timestamp } from "./firestore";
+import { recordBingoGameFinished } from "./roulette";
 import { validatePattern, type Pattern } from "./bingo";
 import { getGame, stopAutoTimer } from "./autoDraw";
 import type { AuthedRequest } from "./auth";
@@ -144,6 +145,8 @@ export async function approveBingoClaim(
     currentGameId: null,
     updatedAt: FieldValue.serverTimestamp(),
   });
+
+  await recordBingoGameFinished();
 
   const winnerId = await nextId("winners");
   const winner = {

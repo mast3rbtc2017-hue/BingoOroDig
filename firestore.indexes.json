@@ -23,6 +23,14 @@
         { "fieldPath": "roomId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "rouletteSpins",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
