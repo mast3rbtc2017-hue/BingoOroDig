@@ -47,7 +47,11 @@ Arquitectura:
 | `NODE_ENV` | `production` |
 | `GOOGLE_CLOUD_PROJECT` | `bingoorodig` |
 | `FRONTEND_URL` | `https://bingoorodig.web.app,https://bingoorodig.firebaseapp.com` |
-| `FIREBASE_SERVICE_ACCOUNT` | Pega **todo** el contenido del JSON de la cuenta de servicio (en una línea) |
+| `FIREBASE_SERVICE_ACCOUNT` | Pega **todo** el contenido del JSON de la cuenta de servicio (en **una sola línea**, sin saltos). Debe incluir `"private_key"` y `"client_email"`. |
+| `FIREBASE_CLIENT_EMAIL` | *(Alternativa)* Email de la cuenta de servicio |
+| `FIREBASE_PRIVATE_KEY` | *(Alternativa)* Clave privada completa (`-----BEGIN PRIVATE KEY-----...`) |
+
+> **Si el JSON falla:** borra `FIREBASE_SERVICE_ACCOUNT` y usa las dos variables alternativas. En la clave privada, pega tal cual con `\n` o saltos reales.
 
 > Para pegar el JSON en Render: abre el `.json` con un editor, copia todo, o usa un minificador. Debe empezar con `{"type":"service_account",...}`.
 
