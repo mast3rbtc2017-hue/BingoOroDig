@@ -1,14 +1,14 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, Link } from "wouter";
 import { useGetGame, useGetDrawnNumbers, useGetGameWinners } from "@workspace/api-client-react";
-import { useGameDrawnNumbers, useGameLive, useGameWinner, useRoomMessages } from "@/lib/realtime";
+import { useGameDrawnNumbers, useGameLive, useGameWinner, useRoomMessages, useGameBingoClaims } from "@/lib/realtime";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import { ArrowLeft, Users, Radio, Pause, Play, Square, RotateCcw, Send, Grid3x3, MessageCircle, Trophy, X } from "lucide-react";
+import { ArrowLeft, Users, Radio, Pause, Play, Square, RotateCcw, Send, Grid3x3, MessageCircle, Trophy, X, Check, Bell } from "lucide-react";
 import { sounds, resumeAudio } from "@/lib/sounds";
 import { apiJson } from "@/lib/api-fetch";
 
@@ -62,6 +62,65 @@ export default function AdminSorteosLive() {
   const liveDrawn = useGameDrawnNumbers(gameId);
   const chatMessages = useRoomMessages(game?.roomId);
   const liveWinner = useGameWinner(gameId);
+  const bingoClaims = useGameBingoClaims(gameId) as Array<{
+    id: number; username: string; pattern: string; patternValid?: boolean;
+    status: string; cardId: number; createdAt?: string;
+  }>;
+  const pendingClaims = bingoClaims.filter((c) => c.status === "pending");
+  const prevPendingCount = useRef(0);
+
+  useEffect(() => {
+    if (pendingClaims.length > prevPendingCount.current) {
+      sounds.win();
+      toast.warning(`🔔 ${pendingClaims.length} bingo(s) pendiente(s) de revisión`, { duration: 8000 });
+    }
+    prevPendingCount.current = pendingClaims.length;
+  }, [pendingClaims.length]);
+
+  const reviewClaim = async (claimId: number, action: "approve" | "reject") => {
+    try {
+      await apiJson(`/api/games/${gameId}/bingo-claims/${claimId}/${action}`, "POST");
+      toast.success(action === "approve" ? "✅ BINGO confirmado" : "❌ BINGO rechazado");
+      refetchGame();
+      refetchWinners();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error");
+    }
+  };
+
+  const PendingClaimsPanel = () => (
+    pendingClaims.length > 0 ? (
+      <div className="bg-gradient-to-r from-orange-500/15 to-red-500/10 border-2 border-orange-500/50 rounded-2xl p-4 animate-pulse">
+        <h3 className="font-bold text-orange-400 mb-3 flex items-center gap-2 text-sm">
+          <Bell className="w-4 h-4" /> ¡BINGO pendiente de revisión! ({pendingClaims.length})
+        </h3>
+        <motion.div className="space-y-3">
+          {pendingClaims.map((c) => (
+            <div key={c.id} className="bg-black/50 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-3 border border-orange-500/30">
+              <div className="flex-1">
+                <p className="font-bold text-white">{c.username}</p>
+                <p className="text-white/50 text-xs">
+                  Cartón #{c.cardId} · Patrón: {PATTERN_LABELS[c.pattern] || c.pattern}
+                  {c.patternValid === true && <span className="text-green-400 ml-2">✓ Patrón válido</span>}
+                  {c.patternValid === false && <span className="text-red-400 ml-2">✗ Patrón inválido</span>}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => reviewClaim(c.id, "approve")}
+                  className="bg-green-500 hover:bg-green-400 text-black font-bold h-8">
+                  <Check className="w-3 h-3 mr-1" /> Confirmar
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => reviewClaim(c.id, "reject")}
+                  className="border-red-500/50 text-red-400 hover:bg-red-500/10 h-8">
+                  <X className="w-3 h-3 mr-1" /> Rechazar
+                </Button>
+              </div>
+            </div>
+          ))}
+        </motion.div>
+      </div>
+    ) : null
+  );
 
   const allDrawn = (() => {
     const map = new Map<number, { number: number; letter: string }>();
@@ -242,8 +301,9 @@ export default function AdminSorteosLive() {
   );
 
   const DrawPanel = () => (
-    <div className="flex flex-col gap-4">
+    <motion.div className="flex flex-col gap-4">
       <ControlBar />
+      <PendingClaimsPanel />
 
       {/* Progress */}
       <div className="bg-black/40 border border-white/5 rounded-xl p-3">
@@ -329,7 +389,7 @@ export default function AdminSorteosLive() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 
   const BoardPanel = () => (

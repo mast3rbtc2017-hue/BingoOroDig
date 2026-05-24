@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, FieldValue, nextId, Timestamp } from "../lib/firestore";
-import { requireAuth, requireAdmin } from "../lib/auth";
+import { requireAuth, requireAdmin, type AuthedRequest } from "../lib/auth";
 import {
   getGame,
   getRoom,
@@ -16,6 +16,11 @@ import {
 } from "../lib/scheduler";
 import { drawBallForGame, serializeDrawn } from "../lib/gameLogic";
 import { getUserByLegacyId } from "../lib/auth";
+import {
+  approveBingoClaim,
+  rejectBingoClaim,
+  serializeBingoClaim,
+} from "../lib/bingoClaims";
 
 const router = Router();
 
@@ -289,6 +294,40 @@ router.get("/games/:id/winners", requireAuth, async (req, res) => {
     }),
   );
   res.json(result);
+});
+
+router.get("/games/:id/bingo-claims", requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  const status = (req.query.status as string) || "pending";
+  const col = db.collection("games").doc(String(id)).collection("bingoClaims");
+  const snap =
+    status === "all" ? await col.get() : await col.where("status", "==", status).get();
+  const claims = snap.docs
+    .map((d) => serializeBingoClaim({ id: Number(d.id), ...d.data() }))
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  res.json(claims);
+});
+
+router.post("/games/:id/bingo-claims/:claimId/approve", requireAdmin, async (req: AuthedRequest, res) => {
+  const gameId = Number(req.params.id);
+  const claimId = Number(req.params.claimId);
+  const result = await approveBingoClaim(gameId, claimId, req.userProfile?.username ?? "admin");
+  if (!result.ok) {
+    res.status(400).json({ error: result.error });
+    return;
+  }
+  res.json({ ok: true, prize: result.prize });
+});
+
+router.post("/games/:id/bingo-claims/:claimId/reject", requireAdmin, async (req: AuthedRequest, res) => {
+  const gameId = Number(req.params.id);
+  const claimId = Number(req.params.claimId);
+  const result = await rejectBingoClaim(gameId, claimId, req.userProfile?.username ?? "admin");
+  if (!result.ok) {
+    res.status(400).json({ error: result.error });
+    return;
+  }
+  res.json({ ok: true });
 });
 
 export default router;

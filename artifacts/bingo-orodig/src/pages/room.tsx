@@ -42,6 +42,7 @@ export default function Room() {
   const [claimingCard, setClaimingCard] = useState<number | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [winnerDismissed, setWinnerDismissed] = useState(false);
+  const [bingoFlash, setBingoFlash] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -154,17 +155,35 @@ export default function Room() {
   const handleClaimBingo = async (cardId: number, pattern: string) => {
     setClaimingCard(cardId);
     try {
-      const data = await apiJson<{ prize: number }>(`/api/cards/${cardId}/claim`, "POST", { pattern });
-      toast.success(`🎉 ¡BINGO! Ganaste $${data.prize}`);
-      sounds.win();
+      const data = await apiJson<{ status: string; message: string; prize?: number }>(
+        `/api/cards/${cardId}/claim`,
+        "POST",
+        { pattern },
+      );
+      if (data.status === "pending") {
+        setBingoFlash("¡BINGO! 🎉\nEsperando verificación del administrador");
+        sounds.win();
+        toast.success(data.message, { duration: 6000 });
+      } else {
+        setBingoFlash(`¡GANASTE! 🏆\n+$${data.prize ?? 0}`);
+        sounds.win();
+        triggerConfetti();
+      }
       refetchCards();
       refetchGame();
+      refetchRoom();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error al reclamar");
     } finally {
       setClaimingCard(null);
     }
   };
+
+  useEffect(() => {
+    if (!bingoFlash) return;
+    const t = setTimeout(() => setBingoFlash(null), 4500);
+    return () => clearTimeout(t);
+  }, [bingoFlash]);
 
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
@@ -398,6 +417,23 @@ export default function Room() {
         </AnimatePresence>
       </div>
 
+      {/* Flash BINGO overlay */}
+      <AnimatePresence>
+        {bingoFlash && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -30 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none px-6"
+          >
+            <div className="bg-gradient-to-br from-primary via-accent to-yellow-300 text-black px-10 py-8 rounded-3xl shadow-[0_0_80px_rgba(212,175,55,0.8)] text-center max-w-sm">
+              <p className="text-4xl md:text-5xl font-black whitespace-pre-line leading-tight">{bingoFlash}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Winner Modal */}
       <AnimatePresence>
         {winner && !winnerDismissed && (
@@ -452,7 +488,7 @@ function BingoCard({ card, drawnNumbers, patternType, gameStatus, onClaim, isCla
     return drawnNumbers.includes(num);
   };
 
-  const canClaim = gameStatus === "playing" && !card.isWinner;
+  const canClaim = gameStatus === "playing" && !card.isWinner && card.claimStatus !== "pending";
   const letters = ["B", "I", "N", "G", "O"];
   const markedCount = grid.flatMap((col, ci) => col.map((num, ri) => isMarked(num, ri, ci))).filter(Boolean).length;
 
@@ -492,6 +528,8 @@ function BingoCard({ card, drawnNumbers, patternType, gameStatus, onClaim, isCla
         <span className="text-[10px] text-white/30">#{card.id} · {markedCount}/25</span>
         {card.isWinner ? (
           <span className="text-xs font-bold text-black bg-accent px-3 py-1 rounded-full">¡GANADOR! 🏆</span>
+        ) : card.claimStatus === "pending" ? (
+          <span className="text-xs font-bold text-yellow-400 bg-yellow-500/20 border border-yellow-500/40 px-3 py-1 rounded-full animate-pulse">En revisión ⏳</span>
         ) : canClaim ? (
           <button onClick={() => { sounds.click(); onClaim(patternType); }}
             disabled={isClaiming}

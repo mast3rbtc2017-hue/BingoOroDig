@@ -33,6 +33,11 @@ export async function drawBallForGame(gameId: number, roomId: number) {
   const allNums = Array.from({ length: 75 }, (_, i) => i + 1).filter((n) => !drawnSet.has(n));
   if (allNums.length === 0) {
     stopAutoTimer(gameId);
+    await gameRef.update({
+      status: "paused",
+      allBallsDrawn: true,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
     return null;
   }
 

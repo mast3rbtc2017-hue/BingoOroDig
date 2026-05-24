@@ -66,6 +66,32 @@ export function useRoomMessages(roomId: number | null | undefined) {
   return messages;
 }
 
+export function useGameBingoClaims(gameId: number | null | undefined) {
+  const [claims, setClaims] = useState<unknown[]>([]);
+
+  useEffect(() => {
+    if (!gameId) {
+      setClaims([]);
+      return;
+    }
+    const q = query(
+      collection(firestore, "games", String(gameId), "bingoClaims"),
+      orderBy("createdAt", "desc"),
+    );
+    return onSnapshot(q, (snap) => {
+      setClaims(
+        snap.docs.map((d) => ({
+          id: Number(d.id),
+          ...d.data(),
+          createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() ?? d.data().createdAt,
+        })),
+      );
+    });
+  }, [gameId]);
+
+  return claims;
+}
+
 export function useGameWinner(gameId: number | null | undefined) {
   const [winner, setWinner] = useState<unknown | null>(null);
 

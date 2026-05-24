@@ -2,9 +2,9 @@ import { Router } from "express";
 import { z } from "zod";
 import { db, FieldValue, nextId, Timestamp } from "../lib/firestore";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
-import { generateCard, validatePattern, nextColorTheme } from "../lib/bingo";
+import { generateCard, nextColorTheme } from "../lib/bingo";
 import { getGame, getRoom } from "../lib/autoDraw";
-import { stopAutoTimer } from "../lib/autoDraw";
+import { submitBingoClaim } from "../lib/bingoClaims";
 
 const router = Router();
 
@@ -26,6 +26,7 @@ function serializeCard(c: Record<string, unknown>) {
     numbers: c.numbers,
     markedNumbers: c.markedNumbers,
     isWinner: c.isWinner,
+    claimStatus: c.claimStatus ?? null,
     colorTheme: c.colorTheme,
     purchasedAt:
       c.purchasedAt instanceof Timestamp
@@ -132,96 +133,13 @@ router.post("/cards/:id/claim", requireAuth, async (req: AuthedRequest, res) => 
     return;
   }
 
-  const cardRef = db.collection("cards").doc(String(id));
-  const cardSnap = await cardRef.get();
-  if (!cardSnap.exists || cardSnap.data()?.userUid !== req.userUid) {
-    res.status(404).json({ error: "Cartón no encontrado" });
-    return;
+  try {
+    const result = await submitBingoClaim(req, id, body.data.pattern);
+    res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al reclamar";
+    res.status(400).json({ error: message });
   }
-  const card = cardSnap.data()!;
-
-  if (card.isWinner) {
-    res.status(400).json({ error: "Ya reclamado" });
-    return;
-  }
-
-  const game = await getGame(card.gameId);
-  if (!game || game.status !== "playing") {
-    res.status(400).json({ error: "La partida no está activa" });
-    return;
-  }
-
-  const drawnSnap = await db
-    .collection("games")
-    .doc(String(card.gameId))
-    .collection("drawnNumbers")
-    .get();
-  const drawnNums = drawnSnap.docs.map((d) => d.data().number as number);
-  const grid: number[][] = JSON.parse(card.numbers);
-
-  const valid = validatePattern(grid, drawnNums, body.data.pattern as never);
-  if (!valid) {
-    res.status(400).json({ error: "¡El patrón de bingo no es válido aún!" });
-    return;
-  }
-
-  stopAutoTimer(card.gameId);
-
-  await cardRef.update({ isWinner: true });
-  await db.collection("games").doc(String(card.gameId)).update({
-    winnerId: req.userId,
-    winnerCardId: id,
-    status: "finished",
-    finishedAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  });
-  await db.collection("rooms").doc(String(card.roomId)).update({
-    status: "active",
-    currentGameId: null,
-    updatedAt: FieldValue.serverTimestamp(),
-  });
-
-  const winnerId = await nextId("winners");
-  const winner = {
-    id: winnerId,
-    gameId: card.gameId,
-    userId: req.userId,
-    cardId: id,
-    pattern: body.data.pattern,
-    prize: game.prize,
-    username: req.userProfile?.username,
-    createdAt: FieldValue.serverTimestamp(),
-  };
-
-  await db.collection("games").doc(String(card.gameId)).collection("winners").doc(String(winnerId)).set(winner);
-  await db.collection("winners").doc(String(winnerId)).set(winner);
-
-  const userRef = db.collection("users").doc(req.userUid!);
-  const userSnap = await userRef.get();
-  const user = userSnap.data()!;
-  await userRef.update({
-    balance: user.balance + (game.prize as number),
-    totalWins: (user.totalWins ?? 0) + 1,
-  });
-
-  await userRef.collection("transactions").add({
-    userId: user.id,
-    type: "prize",
-    amount: game.prize,
-    description: `¡BINGO! Premio — patrón ${body.data.pattern}`,
-    createdAt: FieldValue.serverTimestamp(),
-  });
-
-  res.json({
-    id: winnerId,
-    gameId: card.gameId,
-    userId: req.userId,
-    cardId: id,
-    username: user.username,
-    pattern: body.data.pattern,
-    prize: game.prize,
-    createdAt: new Date().toISOString(),
-  });
 });
 
 export default router;
