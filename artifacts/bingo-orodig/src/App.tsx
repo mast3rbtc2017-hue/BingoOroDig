@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./lib/auth";
+import { auth as firebaseAuth } from "./lib/firebase";
 import NotFound from "@/pages/not-found";
 import Home from "./pages/home";
 import Login from "./pages/login";
@@ -24,7 +25,7 @@ function ProtectedRoute({ component: Component, adminOnly = false }: { component
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  if (isLoading) {
+  if (isLoading || (firebaseAuth.currentUser && !user)) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><div className="text-primary text-xl">Loading...</div></div>;
   }
 

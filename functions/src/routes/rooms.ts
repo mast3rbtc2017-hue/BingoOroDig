@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { db, FieldValue, nextId, Timestamp } from "../lib/firestore";
 import { requireAuth, requireAdmin } from "../lib/auth";
+import { processScheduledGames, processScheduledGameForRoom } from "../lib/scheduler";
 
 const router = Router();
 
@@ -38,6 +39,7 @@ const CreateRoomBody = z.object({
 });
 
 router.get("/rooms", requireAuth, async (_req, res) => {
+  await processScheduledGames();
   const snap = await db.collection("rooms").where("isActive", "==", true).get();
   const rooms = snap.docs
     .map((d) => serializeRoom({ id: Number(d.id), ...d.data() }))
@@ -78,6 +80,7 @@ router.get("/rooms/:id", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
+  await processScheduledGameForRoom(id);
   const snap = await db.collection("rooms").doc(String(id)).get();
   if (!snap.exists) {
     res.status(404).json({ error: "Room not found" });

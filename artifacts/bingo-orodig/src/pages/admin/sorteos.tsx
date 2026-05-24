@@ -12,6 +12,7 @@ import { Plus, Radio, Pencil, Trash2, ArrowLeft, Calendar, Eye, RotateCcw, Searc
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
+import { apiJson } from "@/lib/api-fetch";
 
 const PATTERN_OPTIONS = [
   { value: "line", label: "Línea" }, { value: "diagonal", label: "Diagonal" },
@@ -144,17 +145,8 @@ export default function AdminSorteos({ autoCreate = false }: { autoCreate?: bool
     { key: "finished", label: "Finalizados", count: games?.filter(g => g.status === "finished").length || 0 },
   ];
 
-  const apiCall = async (path: string, method: string, body?: any) => {
-    const token = localStorage.getItem("bingo_token");
-    const r = await fetch(path, {
-      method,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || "Error");
-    return data;
-  };
+  const apiCall = async (path: string, method: string, body?: unknown) =>
+    apiJson(path, method, body);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,7 +157,9 @@ export default function AdminSorteos({ autoCreate = false }: { autoCreate?: bool
         roomId: Number(form.roomId), title: form.title, description: form.description,
         mode: form.mode, patternType: form.patternType, prize: Number(form.prize),
         ballInterval: Number(form.ballInterval),
-        scheduledAt: form.scheduledAt || undefined,
+        scheduledAt: form.scheduledAt
+          ? new Date(form.scheduledAt).toISOString()
+          : undefined,
       };
       if (editGame) {
         await apiCall(`/api/games/${editGame.id}`, "PATCH", body);

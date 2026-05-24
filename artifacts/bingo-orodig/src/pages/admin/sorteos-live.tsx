@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { ArrowLeft, Users, Radio, Pause, Play, Square, RotateCcw, Send, Grid3x3, MessageCircle, Trophy, X } from "lucide-react";
 import { sounds, resumeAudio } from "@/lib/sounds";
+import { apiJson } from "@/lib/api-fetch";
 
 const BINGO_COLS = [
   { letter: "B", nums: [1, 16] },
@@ -79,17 +80,10 @@ export default function AdminSorteosLive() {
 
   const drawnSet = new Set(allDrawn.map(d => d.number));
 
-  const apiCall = useCallback(async (path: string, method: string, body?: any) => {
-    const token = localStorage.getItem("bingo_token");
-    const r = await fetch(path, {
-      method,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || "Error");
-    return data;
-  }, []);
+  const apiCall = useCallback(
+    (path: string, method: string, body?: unknown) => apiJson(path, method, body),
+    [],
+  );
 
   useEffect(() => {
     resumeAudio();
@@ -176,8 +170,10 @@ export default function AdminSorteosLive() {
 
   const sendChat = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim() || !socket) return;
-    apiCall("/api/chat", "POST", { roomId: game?.roomId, content: chatInput }).then(() => setChatInput("")).catch(() => {});
+    if (!chatInput.trim() || !game?.roomId) return;
+    apiCall(`/api/chat/${game.roomId}`, "POST", { content: chatInput })
+      .then(() => setChatInput(""))
+      .catch((err: Error) => toast.error(err.message));
   };
 
   if (!game) return (

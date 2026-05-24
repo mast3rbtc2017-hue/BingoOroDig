@@ -9,6 +9,7 @@ import { User, Wallet, History, CreditCard, Plus } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { apiJson } from "@/lib/api-fetch";
 
 const DEPOSIT_AMOUNTS = [50, 100, 250, 500, 1000];
 
@@ -39,20 +40,13 @@ export default function Profile() {
   const handleDeposit = async (amount: number) => {
     setDepositing(amount);
     try {
+      const data = await apiJson<{ newBalance: number }>("/api/transactions/deposit", "POST", { amount });
       const token = localStorage.getItem("bingo_token");
-      const r = await fetch("/api/transactions/deposit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ amount }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || "Error al recargar");
-      // Update user balance in context
       login(token!, { ...user, balance: data.newBalance });
       toast.success(`✅ +$${amount} agregados a tu saldo`);
       refetchTx();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al recargar");
     } finally {
       setDepositing(null);
     }

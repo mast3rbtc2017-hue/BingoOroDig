@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { onAuthStateChanged, signInWithCustomToken, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { User } from "@workspace/api-client-react";
-import { useGetMe, setAuthTokenGetter } from "@workspace/api-client-react";
+import { useGetMe, setAuthTokenGetter, getMe } from "@workspace/api-client-react";
 import { auth, authEmailForUsername } from "./firebase";
 
 interface AuthContextType {
@@ -67,8 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authEmailForUsername(username),
       password,
     );
+    setHasFirebaseUser(true);
     const token = await cred.user.getIdToken();
     localStorage.setItem("bingo_token", token);
+    const profile = await getMe();
+    setUser(profile);
   }, []);
 
   const registerWithToken = useCallback(async (customToken: string, newUser: User) => {

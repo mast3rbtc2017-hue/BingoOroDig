@@ -8,14 +8,26 @@ import {
   startAutoTimer,
   stopAutoTimer,
 } from "../lib/autoDraw";
+import {
+  ballIntervalSecs,
+  processScheduledGames,
+  shouldAutoDrawBalls,
+  startGameById,
+} from "../lib/scheduler";
 import { drawBallForGame, serializeDrawn } from "../lib/gameLogic";
 import { getUserByLegacyId } from "../lib/auth";
 
 const router = Router();
 
 router.get("/games", requireAuth, async (_req, res) => {
+  await processScheduledGames();
   const snap = await db.collection("games").orderBy("createdAt", "desc").get();
   res.json(snap.docs.map((d) => serializeGame({ id: Number(d.id), ...d.data() })));
+});
+
+router.post("/games/tick-schedule", requireAuth, async (_req, res) => {
+  const started = await processScheduledGames();
+  res.json({ started });
 });
 
 router.post("/games", requireAdmin, async (req, res) => {
@@ -53,7 +65,9 @@ router.post("/games", requireAdmin, async (req, res) => {
     status: "waiting",
     winnerId: null,
     winnerCardId: null,
-    scheduledAt: scheduledAt ? Timestamp.fromDate(new Date(scheduledAt)) : null,
+    scheduledAt: scheduledAt
+      ? Timestamp.fromDate(new Date(scheduledAt as string))
+      : null,
     startedAt: null,
     finishedAt: null,
     createdAt: FieldValue.serverTimestamp(),
@@ -72,6 +86,7 @@ router.post("/games", requireAdmin, async (req, res) => {
 
 router.get("/games/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
+  await processScheduledGames();
   const game = await getGame(id);
   if (!game) {
     res.status(404).json({ error: "Partida no encontrada" });
@@ -150,15 +165,10 @@ router.post("/games/:id/control", requireAdmin, async (req, res) => {
         res.status(400).json({ error: "Solo se puede iniciar una partida en espera" });
         return;
       }
-      updateData = {
-        ...updateData,
-        status: "playing",
-        startedAt: FieldValue.serverTimestamp(),
-      };
-      if (game.mode === "automatic" || room?.type === "automatic") {
-        startAutoTimer(id, game.roomId as number, (game.ballInterval as number) ?? 5);
-      }
-      break;
+      await startGameById(id);
+      const startedGame = await getGame(id);
+      res.json(serializeGame(startedGame!));
+      return;
     case "pause":
       if (game.status !== "playing") {
         res.status(400).json({ error: "La partida no está en curso" });
@@ -173,8 +183,8 @@ router.post("/games/:id/control", requireAdmin, async (req, res) => {
         return;
       }
       updateData.status = "playing";
-      if (game.mode === "automatic" || room?.type === "automatic") {
-        startAutoTimer(id, game.roomId as number, (game.ballInterval as number) ?? 5);
+      if (shouldAutoDrawBalls(game, room)) {
+        startAutoTimer(id, game.roomId as number, ballIntervalSecs(game, room));
       }
       break;
     case "finish":

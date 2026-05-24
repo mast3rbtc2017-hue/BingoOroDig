@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { apiJson } from "@/lib/api-fetch";
 import { Plus, Play } from "lucide-react";
 
 export default function AdminRooms() {
@@ -56,20 +57,11 @@ export default function AdminRooms() {
   const handleCreateGame = async (roomId: number) => {
     setCreatingGameForRoom(roomId);
     try {
-      const token = localStorage.getItem("bingo_token");
-      const r = await fetch("/api/games", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ roomId }),
-      });
-      if (!r.ok) {
-        const err = await r.json();
-        throw new Error(err.error || "Error al crear partida");
-      }
-      toast.success("✅ Partida creada — ahora ve a Control de Partidas para iniciarla");
+      await apiJson("/api/games", "POST", { roomId });
+      toast.success("✅ Partida creada — ve a Sorteos o Control de Partidas para iniciarla");
       refetch();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al crear partida");
     } finally {
       setCreatingGameForRoom(null);
     }

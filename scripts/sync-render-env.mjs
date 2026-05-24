@@ -85,7 +85,11 @@ async function deploy() {
 
 let apiKey = process.env.RENDER_API_KEY?.trim();
 if (!apiKey && fs.existsSync(apiKeyPath)) {
-  apiKey = fs.readFileSync(apiKeyPath, "utf8").trim();
+  apiKey = fs
+    .readFileSync(apiKeyPath, "utf8")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .find((l) => l.startsWith("rnd_")) ?? "";
 }
 
 if (!apiKey) {

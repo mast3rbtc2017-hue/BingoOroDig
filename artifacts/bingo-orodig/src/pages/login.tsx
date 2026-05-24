@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,9 +17,13 @@ const loginSchema = z.object({
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { loginWithPassword } = useAuth();
+  const { user, loginWithPassword } = useAuth();
   const { toast } = useToast();
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (user) setLocation("/lobby");
+  }, [user, setLocation]);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),

@@ -11,8 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import { MessageCircle, X, ChevronUp, ChevronDown, Radio } from "lucide-react";
+import { MessageCircle, X, ChevronUp, ChevronDown, Radio, Calendar, Timer } from "lucide-react";
+import { apiJson } from "@/lib/api-fetch";
 import { sounds, resumeAudio } from "@/lib/sounds";
+import { useCountdown, formatScheduledLocal } from "@/lib/countdown";
+import { useScheduleTicker } from "@/lib/useScheduleTicker";
 
 const PATTERN_LABELS: Record<string, string> = {
   line: "Línea", diagonal: "Diagonal", corners: "Esquinas", x: "X", fullCard: "Cartón lleno"
@@ -38,15 +41,29 @@ export default function Room() {
   const [prevBallCount, setPrevBallCount] = useState(0);
   const [claimingCard, setClaimingCard] = useState<number | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [winnerDismissed, setWinnerDismissed] = useState(false);
   const [unread, setUnread] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: room, refetch: refetchRoom } = useGetRoom(roomId, {
-    query: { enabled: !!roomId, queryKey: ["/api/rooms", roomId] }
+    query: { enabled: !!roomId, queryKey: ["/api/rooms", roomId], refetchInterval: 5000 },
   });
-  const { data: game, refetch: refetchGame } = useGetGame(room?.currentGameId || 0, {
-    query: { enabled: !!room?.currentGameId, queryKey: ["/api/games", room?.currentGameId] }
+  const activeGameId =
+    room?.currentGameId != null && room.currentGameId > 0
+      ? room.currentGameId
+      : undefined;
+  const { data: game, refetch: refetchGame } = useGetGame(activeGameId ?? 0, {
+    query: {
+      enabled: !!activeGameId,
+      queryKey: ["/api/games", activeGameId],
+      retry: false,
+      refetchInterval: 5000,
+    },
   });
+
+  const isScheduledWaiting = game?.status === "waiting" && !!game?.scheduledAt;
+  useScheduleTicker(isScheduledWaiting);
+  const countdown = useCountdown(isScheduledWaiting ? game?.scheduledAt ?? null : null);
   const { data: cards, refetch: refetchCards } = useListMyCards({
     query: { enabled: !!user, queryKey: ["/api/cards"] }
   });
@@ -55,20 +72,24 @@ export default function Room() {
   const gameCards = roomCards.filter(c => c.gameId === room?.currentGameId);
   const buyCardMutation = useBuyCard();
   const sendChatMutation = useSendChatMessage();
-  const liveDrawn = useGameDrawnNumbers(room?.currentGameId);
+  const liveDrawn = useGameDrawnNumbers(activeGameId);
   const chatMessages = useRoomMessages(roomId);
-  const winner = useGameWinner(room?.currentGameId);
+  const winner = useGameWinner(activeGameId);
 
   const allDrawn = liveDrawn;
 
-  const onLiveUpdate = useCallback(() => {
+  const onRoomUpdate = useCallback(() => {
     refetchRoom();
+    refetchCards();
+  }, [refetchRoom, refetchCards]);
+
+  const onGameUpdate = useCallback(() => {
     refetchGame();
     refetchCards();
-  }, [refetchRoom, refetchGame, refetchCards]);
+  }, [refetchGame, refetchCards]);
 
-  useRoomLive(roomId, onLiveUpdate);
-  useGameLive(room?.currentGameId, onLiveUpdate);
+  useRoomLive(roomId, onRoomUpdate);
+  useGameLive(activeGameId, onGameUpdate);
 
   useEffect(() => {
     resumeAudio();
@@ -88,6 +109,7 @@ export default function Room() {
 
   useEffect(() => {
     if (!winner) return;
+    setWinnerDismissed(false);
     sounds.win();
     triggerConfetti();
     refetchRoom();
@@ -132,19 +154,13 @@ export default function Room() {
   const handleClaimBingo = async (cardId: number, pattern: string) => {
     setClaimingCard(cardId);
     try {
-      const token = localStorage.getItem("bingo_token");
-      const r = await fetch(`/api/cards/${cardId}/claim`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ pattern }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || "Error al reclamar");
+      const data = await apiJson<{ prize: number }>(`/api/cards/${cardId}/claim`, "POST", { pattern });
       toast.success(`🎉 ¡BINGO! Ganaste $${data.prize}`);
       sounds.win();
-      refetchCards(); refetchGame();
-    } catch (e: any) {
-      toast.error(e.message);
+      refetchCards();
+      refetchGame();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al reclamar");
     } finally {
       setClaimingCard(null);
     }
@@ -158,7 +174,8 @@ export default function Room() {
   };
 
   const currentBall = allDrawn.length > 0 ? allDrawn[allDrawn.length - 1] : null;
-  const canBuyCard = !!room?.currentGameId && game?.status !== "finished";
+  const canBuyCard = !!room?.currentGameId && game?.status !== "finished" && game?.status !== "paused";
+  const claimPattern = game?.patternType || room?.patternType || "line";
   const gameStatus = game?.status || room?.status || "active";
   const drawnPct = Math.round((allDrawn.length / 75) * 100);
 
@@ -209,6 +226,34 @@ export default function Room() {
                 </div>
               </div>
             </div>
+
+            {isScheduledWaiting && countdown && (
+              <div className="bg-gradient-to-r from-yellow-500/15 to-primary/10 border border-yellow-500/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-8 h-8 text-yellow-400 shrink-0" />
+                  <div>
+                    <p className="text-white/50 text-xs uppercase tracking-wider">Sorteo programado</p>
+                    <p className="text-white font-medium text-sm">{formatScheduledLocal(game!.scheduledAt!)}</p>
+                  </div>
+                </div>
+                <div className="text-center sm:text-right">
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest mb-0.5">Inicia en</p>
+                  <p className="text-3xl md:text-4xl font-black text-yellow-400 tabular-nums">{countdown.label}</p>
+                </div>
+              </div>
+            )}
+
+            {game?.status === "playing" && (
+              <div className="flex items-center gap-2 flex-wrap bg-green-500/10 border border-green-500/30 rounded-xl px-3 py-2 text-sm text-green-400">
+                <Radio className="w-4 h-4 animate-pulse shrink-0" />
+                <span>Sorteo en vivo</span>
+                <span className="text-white/30">·</span>
+                <Timer className="w-3.5 h-3.5" />
+                <span>Bola cada {game.ballInterval ?? room?.ballInterval ?? 5}s</span>
+                <span className="text-white/30">·</span>
+                <span>{allDrawn.length}/75 bolas</span>
+              </div>
+            )}
 
             {/* Ball + History row */}
             <div className="flex gap-3 items-stretch">
@@ -279,7 +324,7 @@ export default function Room() {
                   <BingoCard
                     key={card.id} card={card}
                     drawnNumbers={allDrawn.map(n => n.number)}
-                    patternType={room?.patternType || "line"}
+                    patternType={claimPattern}
                     gameStatus={gameStatus}
                     onClaim={(pattern) => handleClaimBingo(card.id, pattern)}
                     isClaiming={claimingCard === card.id}
@@ -355,7 +400,7 @@ export default function Room() {
 
       {/* Winner Modal */}
       <AnimatePresence>
-        {winner && (
+        {winner && !winnerDismissed && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }}
@@ -365,7 +410,7 @@ export default function Room() {
                 <span className="font-bold text-accent">{winner.username}</span> ganó la partida
               </p>
               <div className="text-3xl md:text-4xl font-bold text-white my-5 bg-black/40 py-4 rounded-xl border border-white/10">${winner.prize}</div>
-              <Button onClick={() => setWinner(null)} className="w-full bg-gradient-to-r from-primary to-accent text-black font-bold">¡Genial!</Button>
+              <Button onClick={() => setWinnerDismissed(true)} className="w-full bg-gradient-to-r from-primary to-accent text-black font-bold">¡Genial!</Button>
             </motion.div>
           </motion.div>
         )}

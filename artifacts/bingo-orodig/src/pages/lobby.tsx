@@ -10,6 +10,8 @@ import { Users, Coins, Timer, Radio, CreditCard, Calendar } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { resumeAudio } from "@/lib/sounds";
+import { useCountdown, formatScheduledLocal } from "@/lib/countdown";
+import { useScheduleTicker } from "@/lib/useScheduleTicker";
 
 const TYPE_LABELS: Record<string, string> = {
   classic: "Clásico", fast: "Rápido", vip: "VIP", automatic: "Automático"
@@ -21,30 +23,13 @@ const TYPE_COLORS: Record<string, string> = {
   automatic: "border-green-500/30 text-green-400",
 };
 
-function useCountdown(target: string | null) {
-  const [remaining, setRemaining] = useState("");
-  useEffect(() => {
-    if (!target) return;
-    const update = () => {
-      const diff = new Date(target).getTime() - Date.now();
-      if (diff <= 0) { setRemaining("¡Ya!"); return; }
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      setRemaining(h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`);
-    };
-    update();
-    const iv = setInterval(update, 1000);
-    return () => clearInterval(iv);
-  }, [target]);
-  return remaining;
-}
-
 function RoomCard({ room, game, index }: { room: any; game: any; index: number }) {
-  const drawnCount = 0; // Could be fetched but keeping it light
   const scheduledAt = game?.scheduledAt ?? null;
-  const countdown = useCountdown(scheduledAt && game?.status === "waiting" ? scheduledAt : null);
+  const countdown = useCountdown(
+    scheduledAt && game?.status === "waiting" ? scheduledAt : null,
+  );
   const isLive = game?.status === "playing";
+  const isScheduled = game?.status === "waiting" && !!scheduledAt;
 
   return (
     <motion.div
@@ -115,10 +100,18 @@ function RoomCard({ room, game, index }: { room: any; game: any; index: number }
         </div>
 
         {/* Countdown for scheduled games */}
-        {countdown && game?.scheduledAt && game?.status === "waiting" && (
-          <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-3 py-2 mb-3 text-sm">
-            <Calendar className="w-4 h-4 text-yellow-400 shrink-0" />
-            <span className="text-yellow-400 font-medium">Inicia en: <strong>{countdown}</strong></span>
+        {isScheduled && countdown && (
+          <div className="flex flex-col gap-1 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-3 py-2.5 mb-3">
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar className="w-4 h-4 text-yellow-400 shrink-0" />
+              <span className="text-yellow-400/90 text-xs">
+                {formatScheduledLocal(scheduledAt!)}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-white/50 text-xs uppercase tracking-wider">Inicia en</span>
+              <span className="text-2xl font-black text-yellow-400 tabular-nums">{countdown.label}</span>
+            </div>
           </div>
         )}
 
@@ -144,9 +137,15 @@ function RoomCard({ room, game, index }: { room: any; game: any; index: number }
 }
 
 export default function Lobby() {
-  const { data: rooms, isLoading } = useListRooms({ query: { queryKey: ["/api/rooms"], refetchInterval: 15000 } });
-  const { data: games } = useListGames({ query: { queryKey: ["/api/games"], refetchInterval: 15000 } });
+  const { data: rooms, isLoading } = useListRooms({ query: { queryKey: ["/api/rooms"], refetchInterval: 5000 } });
+  const { data: games } = useListGames({ query: { queryKey: ["/api/games"], refetchInterval: 5000 } });
   const [filter, setFilter] = useState<"all" | "live" | "waiting">("all");
+
+  const hasScheduledWaiting = (games ?? []).some(
+    (g: { status?: string; scheduledAt?: string | null }) =>
+      g.status === "waiting" && g.scheduledAt,
+  );
+  useScheduleTicker(hasScheduledWaiting);
 
   const activeRooms = rooms || [];
   const filteredRooms = activeRooms.filter(r => {
