@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useParams, Link } from "wouter";
-import { io, Socket } from "socket.io-client";
 import { useAuth } from "@/lib/auth";
-import { useGetRoom, useGetGame, useListMyCards, useSendChatMessage, useBuyCard, useGetDrawnNumbers } from "@workspace/api-client-react";
+import { useGetRoom, useGetGame, useListMyCards, useSendChatMessage, useBuyCard } from "@workspace/api-client-react";
+import { useGameDrawnNumbers, useGameLive, useGameWinner, useRoomLive, useRoomMessages } from "@/lib/realtime";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,12 +33,9 @@ export default function Room() {
   const roomId = parseInt(id!);
   const { user } = useAuth();
 
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [liveDrawn, setLiveDrawn] = useState<Array<{number: number, letter: string}>>([]);
   const [playerCount, setPlayerCount] = useState(0);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState("");
-  const [winner, setWinner] = useState<any | null>(null);
+  const [prevBallCount, setPrevBallCount] = useState(0);
   const [claimingCard, setClaimingCard] = useState<number | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -50,9 +47,6 @@ export default function Room() {
   const { data: game, refetch: refetchGame } = useGetGame(room?.currentGameId || 0, {
     query: { enabled: !!room?.currentGameId, queryKey: ["/api/games", room?.currentGameId] }
   });
-  const { data: existingDrawn } = useGetDrawnNumbers(room?.currentGameId || 0, {
-    query: { enabled: !!room?.currentGameId, queryKey: ["/api/games/drawn", room?.currentGameId] }
-  });
   const { data: cards, refetch: refetchCards } = useListMyCards({
     query: { enabled: !!user, queryKey: ["/api/cards"] }
   });
@@ -61,55 +55,55 @@ export default function Room() {
   const gameCards = roomCards.filter(c => c.gameId === room?.currentGameId);
   const buyCardMutation = useBuyCard();
   const sendChatMutation = useSendChatMessage();
+  const liveDrawn = useGameDrawnNumbers(room?.currentGameId);
+  const chatMessages = useRoomMessages(roomId);
+  const winner = useGameWinner(room?.currentGameId);
 
-  const allDrawn = (() => {
-    const map = new Map<number, {number: number, letter: string}>();
-    (existingDrawn || []).forEach(d => map.set(d.number, { number: d.number, letter: d.letter }));
-    liveDrawn.forEach(d => map.set(d.number, d));
-    return Array.from(map.values());
-  })();
+  const allDrawn = liveDrawn;
+
+  const onLiveUpdate = useCallback(() => {
+    refetchRoom();
+    refetchGame();
+    refetchCards();
+  }, [refetchRoom, refetchGame, refetchCards]);
+
+  useRoomLive(roomId, onLiveUpdate);
+  useGameLive(room?.currentGameId, onLiveUpdate);
 
   useEffect(() => {
     resumeAudio();
-    if (!roomId) return;
-    const newSocket = io(window.location.origin, { path: "/api/socket.io" });
-    newSocket.on("connect", () => newSocket.emit("join_room", { roomId }));
-    newSocket.on("player_joined", (data: any) => { if (data.roomId === roomId) setPlayerCount(data.playerCount); });
-    newSocket.on("player_left", (data: any) => { if (data.roomId === roomId) setPlayerCount(data.playerCount); });
-    newSocket.on("ball_drawn", (data: any) => {
+  }, []);
+
+  useEffect(() => {
+    if (room?.playerCount != null) setPlayerCount(room.playerCount);
+  }, [room?.playerCount]);
+
+  useEffect(() => {
+    if (allDrawn.length > prevBallCount && prevBallCount > 0) {
       sounds.ballDraw();
-      setLiveDrawn(prev => {
-        if (prev.find(b => b.number === data.number)) return prev;
-        return [...prev, { number: data.number, letter: data.letter }];
-      });
       refetchCards();
+    }
+    setPrevBallCount(allDrawn.length);
+  }, [allDrawn.length, prevBallCount, refetchCards]);
+
+  useEffect(() => {
+    if (!winner) return;
+    sounds.win();
+    triggerConfetti();
+    refetchRoom();
+    refetchGame();
+  }, [winner, refetchRoom, refetchGame]);
+
+  useEffect(() => {
+    if (chatMessages.length === 0) return;
+    setChatOpen((open) => {
+      if (!open) setUnread((u) => u + 1);
+      return open;
     });
-    newSocket.on("game_state", (data: any) => {
-      if (data.roomId === roomId) { refetchRoom(); refetchGame(); refetchCards(); }
-    });
-    newSocket.on("chat_message", (data: any) => {
-      if (data.roomId === roomId) {
-        setChatMessages(prev => [...prev, data.message]);
-        setChatOpen(open => {
-          if (!open) setUnread(u => u + 1);
-          return open;
-        });
-        setTimeout(() => {
-          if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }, 100);
-      }
-    });
-    newSocket.on("winner", (data: any) => {
-      if (data.gameId === room?.currentGameId) {
-        setWinner(data);
-        sounds.win();
-        triggerConfetti();
-        refetchRoom(); refetchGame();
-      }
-    });
-    setSocket(newSocket);
-    return () => { newSocket.emit("leave_room", { roomId }); newSocket.disconnect(); };
-  }, [roomId, room?.currentGameId]);
+    setTimeout(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }, 100);
+  }, [chatMessages.length]);
 
   // Clear unread when chat opens
   useEffect(() => { if (chatOpen) setUnread(0); }, [chatOpen]);

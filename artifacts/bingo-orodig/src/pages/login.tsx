@@ -3,7 +3,6 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
@@ -18,34 +17,31 @@ const loginSchema = z.object({
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { login: setAuthContext } = useAuth();
+  const { loginWithPassword } = useAuth();
   const { toast } = useToast();
-
-  const loginMutation = useLogin();
+  const [pending, setPending] = useState(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: { username: "", password: "" },
   });
 
-  const onSubmit = (data: z.infer<typeof loginSchema>) => {
-    loginMutation.mutate(
-      { data },
-      {
-        onSuccess: (response) => {
-          setAuthContext(response.token, response.user);
-          toast({ title: "¡Bienvenido de vuelta!", description: "Sesión iniciada correctamente." });
-          setLocation("/lobby");
-        },
-        onError: (error) => {
-          toast({
-            title: "Error al iniciar sesión",
-            description: error.message || "Credenciales inválidas",
-            variant: "destructive"
-          });
-        }
-      }
-    );
+  const onSubmit = async (data: z.infer<typeof loginSchema>) => {
+    setPending(true);
+    try {
+      await loginWithPassword(data.username, data.password);
+      toast({ title: "¡Bienvenido de vuelta!", description: "Sesión iniciada correctamente." });
+      setLocation("/lobby");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Credenciales inválidas";
+      toast({
+        title: "Error al iniciar sesión",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setPending(false);
+    }
   };
 
   return (
@@ -96,9 +92,9 @@ export default function Login() {
               <Button
                 type="submit"
                 className="w-full h-12 text-lg font-bold bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
-                disabled={loginMutation.isPending}
+                disabled={pending}
               >
-                {loginMutation.isPending ? "Ingresando..." : "Iniciar Sesión"}
+                {pending ? "Ingresando..." : "Iniciar Sesión"}
               </Button>
             </form>
 

@@ -18,7 +18,7 @@ const registerSchema = z.object({
 
 export default function Register() {
   const [, setLocation] = useLocation();
-  const { login: setAuthContext } = useAuth();
+  const { registerWithToken } = useAuth();
   const { toast } = useToast();
 
   const registerMutation = useRegister();
@@ -32,8 +32,8 @@ export default function Register() {
     registerMutation.mutate(
       { data },
       {
-        onSuccess: (response) => {
-          setAuthContext(response.token, response.user);
+        onSuccess: async (response) => {
+          await registerWithToken(response.token, response.user);
           toast({ title: "¡Cuenta creada!", description: "Bienvenido a Bingo OroDig." });
           setLocation("/lobby");
         },

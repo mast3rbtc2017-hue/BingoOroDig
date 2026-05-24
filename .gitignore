@@ -47,3 +47,18 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+!.env.production.example
+functions/.env
+**/firebase-service-account*.json
+**/*-firebase-adminsdk-*.json
+
+# Firebase local cache
+.firebase/
+
+# API build output (Render compila con npm run build)
+functions/lib/

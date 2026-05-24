@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, Link } from "wouter";
-import { io, Socket } from "socket.io-client";
 import { useGetGame, useGetDrawnNumbers, useGetGameWinners } from "@workspace/api-client-react";
+import { useGameDrawnNumbers, useGameLive, useGameWinner, useRoomMessages } from "@/lib/realtime";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,10 +36,8 @@ export default function AdminSorteosLive() {
   const { id } = useParams();
   const gameId = Number(id);
 
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [liveDrawn, setLiveDrawn] = useState<Array<{ number: number; letter: string }>>([]);
   const [playerCount, setPlayerCount] = useState(0);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [prevBallCount, setPrevBallCount] = useState(0);
   const [chatInput, setChatInput] = useState("");
   const [drawing, setDrawing] = useState(false);
   const [controlling, setControlling] = useState(false);
@@ -60,12 +58,24 @@ export default function AdminSorteosLive() {
     query: { enabled: !!gameId, queryKey: ["/api/games/winners", gameId] }
   });
 
+  const liveDrawn = useGameDrawnNumbers(gameId);
+  const chatMessages = useRoomMessages(game?.roomId);
+  const liveWinner = useGameWinner(gameId);
+
   const allDrawn = (() => {
     const map = new Map<number, { number: number; letter: string }>();
     (drawnNums || []).forEach(d => map.set(d.number, { number: d.number, letter: d.letter }));
     liveDrawn.forEach(d => map.set(d.number, d));
     return Array.from(map.values());
   })();
+
+  const onLiveUpdate = useCallback(() => {
+    refetchGame();
+    refetchDrawn();
+    refetchWinners();
+  }, [refetchGame, refetchDrawn, refetchWinners]);
+
+  useGameLive(gameId, onLiveUpdate);
 
   const drawnSet = new Set(allDrawn.map(d => d.number));
 
@@ -83,37 +93,34 @@ export default function AdminSorteosLive() {
 
   useEffect(() => {
     resumeAudio();
-    if (!game?.roomId) return;
-    const s = io(window.location.origin, { path: "/api/socket.io" });
-    s.on("connect", () => s.emit("join_room", { roomId: game.roomId }));
-    s.on("player_joined", (d: any) => setPlayerCount(d.playerCount));
-    s.on("player_left", (d: any) => setPlayerCount(d.playerCount));
-    s.on("ball_drawn", (d: any) => {
+  }, []);
+
+  useEffect(() => {
+    if (allDrawn.length > prevBallCount && prevBallCount > 0) {
+      const ball = allDrawn[allDrawn.length - 1];
       sounds.ballDraw();
-      setLiveDrawn(prev => {
-        if (prev.find(b => b.number === d.number)) return prev;
-        return [...prev, { number: d.number, letter: d.letter }];
-      });
-      setLastBall({ number: d.number, letter: d.letter });
+      setLastBall(ball);
       refetchDrawn();
-    });
-    s.on("game_state", () => { refetchGame(); refetchDrawn(); });
-    s.on("winner", (d: any) => {
-      setWinners(prev => [...prev, d]);
-      refetchWinners();
-      triggerConfetti();
-      sounds.win();
-      toast.success(`🎉 ¡BINGO! ${d.username} ganó $${d.prize}`);
-    });
-    s.on("chat_message", (d: any) => {
-      if (d.roomId === game.roomId) {
-        setChatMessages(prev => [...prev, d.message]);
-        setTimeout(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; }, 80);
-      }
-    });
-    setSocket(s);
-    return () => { s.disconnect(); };
-  }, [game?.roomId]);
+    }
+    setPrevBallCount(allDrawn.length);
+  }, [allDrawn.length, prevBallCount, refetchDrawn, allDrawn]);
+
+  useEffect(() => {
+    if (!liveWinner) return;
+    setWinners((prev) => [...prev, liveWinner]);
+    refetchWinners();
+    triggerConfetti();
+    sounds.win();
+    const w = liveWinner as { username?: string; prize?: number };
+    toast.success(`🎉 ¡BINGO! ${w.username ?? "Jugador"} ganó $${w.prize ?? 0}`);
+  }, [liveWinner, refetchWinners]);
+
+  useEffect(() => {
+    if (chatMessages.length === 0) return;
+    setTimeout(() => {
+      if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }, 80);
+  }, [chatMessages.length]);
 
   const triggerConfetti = () => {
     const end = Date.now() + 4000;

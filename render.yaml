@@ -1,0 +1,23 @@
+# Blueprint Render — https://render.com/docs/blueprint-spec
+# Al crear el servicio desde el repo, Render lee este archivo.
+services:
+  - type: web
+    name: bingoorodig-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: functions
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: GOOGLE_CLOUD_PROJECT
+        value: bingoorodig
+      - key: FRONTEND_URL
+        value: https://bingoorodig.web.app,https://bingoorodig.firebaseapp.com
+      # Añade en el panel de Render (secreto, no en git):
+      # FIREBASE_SERVICE_ACCOUNT = JSON completo de la cuenta de servicio

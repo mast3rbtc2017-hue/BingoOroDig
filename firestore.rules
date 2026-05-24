@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return signedIn() && userDoc().role == 'admin';
+    }
+
+    // Profiles: read own or admin reads all via API; clients read own for live UI
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if false;
+    }
+
+    match /usernames/{username} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    match /rooms/{roomId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /games/{gameId} {
+      allow read: if signedIn();
+      allow write: if false;
+
+      match /drawnNumbers/{numId} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
+
+      match /winners/{winnerId} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
+    }
+
+    match /cards/{cardId} {
+      allow read: if signedIn() && resource.data.userUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /rooms/{roomId}/messages/{msgId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /users/{uid}/transactions/{txId} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /winners/{winnerId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /_counters/{id} {
+      allow read, write: if false;
+    }
+  }
+}
