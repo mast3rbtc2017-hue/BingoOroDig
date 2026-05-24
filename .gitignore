@@ -56,6 +56,8 @@ Thumbs.db
 functions/.env
 **/firebase-service-account*.json
 **/*-firebase-adminsdk-*.json
+.render-api-key
+render-import-bingoorodig.env
 
 # Firebase local cache
 .firebase/
