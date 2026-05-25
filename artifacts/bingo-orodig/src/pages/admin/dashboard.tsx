@@ -1,4 +1,4 @@
-import { useGetDashboardStats, useListGames, useListRooms } from "@workspace/api-client-react";
+import { useGetDashboardStats, useListGames } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,8 @@ export default function AdminDashboard() {
     query: { queryKey: ["/api/stats/dashboard"] }
   });
   const { data: games } = useListGames({ query: { queryKey: ["/api/games"] } });
-  const { data: rooms } = useListRooms({ query: { queryKey: ["/api/rooms"] } });
-
   const activeGames = (games as any[])?.filter((g: any) => g.status !== "finished") || [];
+  const finishedGames = (games as any[])?.filter((g: any) => g.status === "finished") || [];
   const scheduledGames = (games as any[])?.filter((g: any) => (g as any).scheduledAt && g.status === "waiting") || [];
 
   return (
@@ -55,7 +54,7 @@ export default function AdminDashboard() {
           {[
             { label: "Usuarios", value: stats?.totalUsers ?? "—", icon: Users, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
             { label: "Partidas activas", value: stats?.activeGames ?? "—", icon: Radio, color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
-            { label: "Salas", value: stats?.totalRooms ?? "—", icon: Presentation, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
+            { label: "Sorteos finalizados", value: finishedGames.length, icon: Presentation, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
             { label: "Ingresos", value: formatCOP(stats?.totalRevenue ?? 0), icon: Coins, color: "text-accent", bg: "bg-accent/10 border-accent/20" },
           ].map((s, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
@@ -100,7 +99,7 @@ export default function AdminDashboard() {
                     <Badge className={STATUS_COLORS[game.status]}>{STATUS_LABELS[game.status]}</Badge>
                   </div>
                   <p className="text-sm text-white/50">
-                    Sala #{game.roomId} • Premio: <span className="text-accent font-bold">{formatCOP(game.prize)}</span> • {MODE_LABELS[game.mode] || "Manual"}
+                    Cartón {formatCOP(game.cardPrice ?? 5000)} • Premio: <span className="text-accent font-bold">{formatCOP(game.prize)}</span> • {MODE_LABELS[game.mode] || "Manual"}
                     {game.scheduledAt && <> • <span className="text-yellow-400"><Calendar className="w-3 h-3 inline mr-1" />{format(new Date(game.scheduledAt), "d MMM HH:mm", { locale: es })}</span></>}
                   </p>
                 </div>
@@ -125,7 +124,6 @@ export default function AdminDashboard() {
                 {[
                   { label: "Nuevo Sorteo", desc: "Crear y programar", href: "/admin/sorteos/nuevo", icon: Plus, color: "text-primary bg-primary/10 border-primary/20" },
                   { label: "Gestionar Sorteos", desc: "Ver, editar, borrar", href: "/admin/sorteos", icon: Gamepad2, color: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
-                  { label: "Gestionar Salas", desc: "Configurar salas", href: "/admin/rooms", icon: Presentation, color: "text-purple-400 bg-purple-500/10 border-purple-500/20" },
                   { label: "Gestionar Usuarios", desc: "Cuentas y saldos", href: "/admin/users", icon: Users, color: "text-green-400 bg-green-500/10 border-green-500/20" },
                   { label: "Ruleta", desc: "Premios cada N bingos", href: "/admin/roulette", icon: CircleDot, color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
                 ].map((a, i) => (
@@ -143,20 +141,19 @@ export default function AdminDashboard() {
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-white mb-3 flex items-center gap-2"><Presentation className="w-5 h-5 text-primary" /> Salas Activas</h2>
+              <h2 className="text-xl font-bold text-white mb-3 flex items-center gap-2"><Clock className="w-5 h-5 text-primary" /> Programados</h2>
               <div className="space-y-2">
-                {rooms?.slice(0, 5).map((room: any) => (
-                  <div key={room.id} className="bg-card/30 border border-white/5 rounded-xl p-3 flex justify-between items-center">
-                    <div>
-                      <p className="text-white font-medium text-sm">{room.name}</p>
-                      <p className="text-white/40 text-xs capitalize">{room.type} • {formatCOP(room.prize)}</p>
-                    </div>
-                    <Badge className={room.currentGameId ? "bg-green-500/20 text-green-400 border-green-500/20" : "bg-white/5 text-white/30 border-white/10"}>
-                      {room.currentGameId ? "Con partida" : "Libre"}
-                    </Badge>
+                {scheduledGames.slice(0, 5).map((game: any) => (
+                  <div key={game.id} className="bg-card/30 border border-white/5 rounded-xl p-3">
+                    <p className="text-white font-medium text-sm">{game.title || `Sorteo #${game.id}`}</p>
+                    <p className="text-white/40 text-xs">
+                      {game.scheduledAt
+                        ? format(new Date(game.scheduledAt), "d MMM yyyy HH:mm", { locale: es })
+                        : "Sin fecha"}
+                    </p>
                   </div>
                 ))}
-                {!rooms?.length && <p className="text-white/30 text-sm text-center py-4">Sin salas</p>}
+                {!scheduledGames.length && <p className="text-white/30 text-sm text-center py-4">Sin sorteos programados</p>}
               </div>
             </div>
           </div>

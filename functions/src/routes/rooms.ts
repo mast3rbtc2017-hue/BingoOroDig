@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { db, FieldValue, nextId, Timestamp } from "../lib/firestore";
 import { requireAuth, requireAdmin } from "../lib/auth";
-import { processScheduledGames, processScheduledGameForRoom } from "../lib/scheduler";
+import { processScheduledGames } from "../lib/scheduler";
 
 const router = Router();
 
@@ -80,7 +80,7 @@ router.get("/rooms/:id", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
-  await processScheduledGameForRoom(id);
+  await processScheduledGames();
   const snap = await db.collection("rooms").doc(String(id)).get();
   if (!snap.exists) {
     res.status(404).json({ error: "Room not found" });

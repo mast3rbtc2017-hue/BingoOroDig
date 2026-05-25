@@ -9,7 +9,7 @@ export function MobileNav() {
   if (!user) return null;
 
   // Don't show on admin live panel or room page (too distracting)
-  if (location.startsWith("/room/") || location.startsWith("/admin/sorteos/") && location.endsWith("/live")) return null;
+  if (location.startsWith("/sorteo/") || location.startsWith("/room/") || (location.startsWith("/admin/sorteos/") && location.endsWith("/live"))) return null;
 
   const tabs = [
     { href: "/lobby", label: "Lobby", icon: Gamepad2 },

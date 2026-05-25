@@ -1,4 +1,5 @@
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation, useParams } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,12 +10,10 @@ import Home from "./pages/home";
 import Login from "./pages/login";
 import Register from "./pages/register";
 import Lobby from "./pages/lobby";
-import Room from "./pages/room";
+import SorteoPage from "./pages/room";
 import Profile from "./pages/profile";
 import Leaderboard from "./pages/leaderboard";
 import AdminDashboard from "./pages/admin/dashboard";
-import AdminRooms from "./pages/admin/rooms";
-import AdminGames from "./pages/admin/games";
 import AdminUsers from "./pages/admin/users";
 import AdminSorteos from "./pages/admin/sorteos";
 import AdminSorteosLive from "./pages/admin/sorteos-live";
@@ -23,6 +22,20 @@ import AdminRoulette from "./pages/admin/roulette";
 import { NotificationsListener } from "@/components/NotificationsListener";
 
 const queryClient = new QueryClient();
+
+function RedirectTo({ href }: { href: string }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(href);
+  }, [href, setLocation]);
+  return null;
+}
+
+function RedirectRoomToSorteo() {
+  const { id } = useParams();
+  if (!id) return <RedirectTo href="/lobby" />;
+  return <RedirectTo href={`/sorteo/${id}`} />;
+}
 
 function ProtectedRoute({ component: Component, adminOnly = false }: { component: any, adminOnly?: boolean }) {
   const { user, isLoading } = useAuth();
@@ -54,13 +67,14 @@ function Router() {
       <Route path="/leaderboard" component={Leaderboard} />
       
       <Route path="/lobby"><ProtectedRoute component={Lobby} /></Route>
-      <Route path="/room/:id"><ProtectedRoute component={Room} /></Route>
+      <Route path="/sorteo/:id"><ProtectedRoute component={SorteoPage} /></Route>
+      <Route path="/room/:id"><RedirectRoomToSorteo /></Route>
       <Route path="/profile"><ProtectedRoute component={Profile} /></Route>
       <Route path="/roulette"><ProtectedRoute component={Roulette} /></Route>
       
       <Route path="/admin"><ProtectedRoute component={AdminDashboard} adminOnly /></Route>
-      <Route path="/admin/rooms"><ProtectedRoute component={AdminRooms} adminOnly /></Route>
-      <Route path="/admin/games"><ProtectedRoute component={AdminGames} adminOnly /></Route>
+      <Route path="/admin/rooms"><ProtectedRoute component={() => <RedirectTo href="/admin/sorteos" />} adminOnly /></Route>
+      <Route path="/admin/games"><ProtectedRoute component={() => <RedirectTo href="/admin/sorteos" />} adminOnly /></Route>
       <Route path="/admin/users"><ProtectedRoute component={AdminUsers} adminOnly /></Route>
       <Route path="/admin/sorteos/nuevo"><ProtectedRoute component={() => <AdminSorteos autoCreate />} adminOnly /></Route>
       <Route path="/admin/sorteos/:id/live"><ProtectedRoute component={AdminSorteosLive} adminOnly /></Route>

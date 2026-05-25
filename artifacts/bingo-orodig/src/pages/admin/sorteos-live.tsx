@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, Link } from "wouter";
 import { useGetGame, useGetDrawnNumbers, useGetGameWinners } from "@workspace/api-client-react";
-import { useGameDrawnNumbers, useGameLive, useGameWinner, useRoomMessages, useGameBingoClaims } from "@/lib/realtime";
+import { useGameDrawnNumbers, useGameLive, useGameWinner, useGameMessages, useGameBingoClaims } from "@/lib/realtime";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -61,7 +61,7 @@ export default function AdminSorteosLive() {
   });
 
   const liveDrawn = useGameDrawnNumbers(gameId);
-  const chatMessages = useRoomMessages(game?.roomId);
+  const chatMessages = useGameMessages(gameId);
   const liveWinner = useGameWinner(gameId);
   const bingoClaims = useGameBingoClaims(gameId) as Array<{
     id: number; username: string; pattern: string; patternValid?: boolean;
@@ -233,8 +233,8 @@ export default function AdminSorteosLive() {
 
   const sendChat = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim() || !game?.roomId) return;
-    apiCall(`/api/chat/${game.roomId}`, "POST", { content: chatInput })
+    if (!chatInput.trim() || !gameId) return;
+    apiCall(`/api/chat/${gameId}`, "POST", { content: chatInput })
       .then(() => setChatInput(""))
       .catch((err: Error) => toast.error(err.message));
   };
@@ -475,7 +475,7 @@ export default function AdminSorteosLive() {
               <Badge className={`${STATUS_COLORS[status]} text-xs`}>{status === "waiting" ? "En espera" : status === "playing" ? "En Vivo" : status === "paused" ? "Pausado" : "Finalizado"}</Badge>
               {isPlaying && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />}
             </div>
-            <p className="text-white/30 text-xs hidden md:block">Sala #{game.roomId} · Premio: <span className="text-accent">{formatCOP(game.prize)}</span> · {PATTERN_LABELS[game.patternType]}</p>
+            <p className="text-white/30 text-xs hidden md:block">Sorteo #{gameId} · Premio: <span className="text-accent">{formatCOP(game.prize)}</span> · {PATTERN_LABELS[game.patternType]}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">

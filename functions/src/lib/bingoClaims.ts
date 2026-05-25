@@ -27,16 +27,16 @@ export function serializeBingoClaim(c: Record<string, unknown>) {
   };
 }
 
-export async function postSystemMessage(roomId: number, content: string): Promise<void> {
+export async function postSystemMessage(gameId: number, content: string): Promise<void> {
   const msgId = await nextId("messages");
   await db
-    .collection("rooms")
-    .doc(String(roomId))
+    .collection("games")
+    .doc(String(gameId))
     .collection("messages")
     .doc(String(msgId))
     .set({
       id: msgId,
-      roomId,
+      gameId,
       userId: null,
       username: "Sistema",
       avatarUrl: null,
@@ -116,7 +116,7 @@ export async function approveBingoClaim(
       });
     }
     await postSystemMessage(
-      claim.roomId as number,
+      claim.gameId as number,
       `❌ BINGO de ${claim.username} rechazado — patrón no válido. Sorteo reanudado.`,
     );
     return { ok: false, error: "Patrón no válido — reclamo rechazado" };
@@ -138,11 +138,6 @@ export async function approveBingoClaim(
     status: "finished",
     pendingReview: false,
     finishedAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  });
-
-  await db.collection("rooms").doc(String(claim.roomId)).update({
-    status: "active",
     updatedAt: FieldValue.serverTimestamp(),
   });
 
@@ -181,13 +176,13 @@ export async function approveBingoClaim(
       title: "¡BINGO confirmado!",
       message: `Tu premio de ${formatCOP(game.prize as number)} fue acreditado. Patrón: ${claim.pattern}`,
       gameId,
-      roomId: claim.roomId as number,
+      roomId: claim.gameId as number,
       amount: game.prize as number,
     });
   }
 
   await postSystemMessage(
-    claim.roomId as number,
+    claim.gameId as number,
     `🎉 ¡BINGO confirmado! ${claim.username} ganó ${formatCOP(game.prize as number)}`,
   );
 
@@ -222,13 +217,13 @@ export async function rejectBingoClaim(
       updatedAt: FieldValue.serverTimestamp(),
     });
     await postSystemMessage(
-      claim.roomId as number,
+      claim.gameId as number,
       `Sorteo reanudado tras revisión (${adminUsername}).`,
     );
   }
 
   await postSystemMessage(
-    claim.roomId as number,
+    claim.gameId as number,
     `❌ BINGO de ${claim.username} rechazado por ${adminUsername}.`,
   );
 
@@ -273,7 +268,7 @@ export async function submitBingoClaim(
   const claim = {
     id: claimId,
     gameId: card.gameId,
-    roomId: card.roomId,
+    roomId: card.gameId,
     cardId,
     userId: req.userId,
     userUid: req.userUid,
@@ -295,7 +290,7 @@ export async function submitBingoClaim(
   await pauseGameForReview(card.gameId as number);
 
   await postSystemMessage(
-    card.roomId as number,
+    card.gameId as number,
     `🔔 ${req.userProfile?.username} cantó ¡BINGO! — Sorteo pausado. Pendiente revisión del admin.`,
   );
 

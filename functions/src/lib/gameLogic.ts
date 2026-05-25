@@ -15,7 +15,7 @@ export function serializeDrawn(d: Record<string, unknown>) {
   };
 }
 
-export async function drawBallForGame(gameId: number, roomId: number) {
+export async function drawBallForGame(gameId: number) {
   const gameRef = db.collection("games").doc(String(gameId));
   const gameSnap = await gameRef.get();
   if (!gameSnap.exists) {

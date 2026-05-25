@@ -12,6 +12,7 @@ import { useCountdown, formatScheduledLocal } from "@/lib/countdown";
 import { useScheduleTicker } from "@/lib/useScheduleTicker";
 import { apiJson } from "@/lib/api-fetch";
 import { formatCOP } from "@/lib/currency";
+import { useAuth } from "@/lib/auth";
 
 const TYPE_LABELS: Record<string, string> = {
   classic: "Clásico", fast: "Rápido", vip: "VIP", automatic: "Automático",
@@ -23,27 +24,23 @@ const TYPE_COLORS: Record<string, string> = {
   automatic: "border-green-500/30 text-green-400",
 };
 
+type LobbyGame = {
+  id: number;
+  title: string | null;
+  description: string | null;
+  status: string;
+  patternType: string;
+  scheduledAt?: string | null;
+  prize: number;
+  cardPrice: number | null;
+  maxPlayers: number | null;
+  ballInterval: number;
+  playerCount?: number;
+  type?: string;
+};
+
 type LobbyItem = {
-  room: {
-    id: number;
-    name: string;
-    description?: string;
-    type: string;
-    cardPrice: number;
-    maxPlayers: number;
-    ballInterval: number;
-    prize: number;
-    patternType: string;
-    playerCount?: number;
-  };
-  game: {
-    id: number;
-    status: string;
-    patternType: string;
-    scheduledAt?: string | null;
-    title?: string | null;
-    prize: number;
-  };
+  game: LobbyGame;
   winnerUsername: string | null;
 };
 
@@ -65,14 +62,16 @@ function gameStatusMeta(status: string) {
 }
 
 function SorteoCard({ item, index }: { item: LobbyItem; index: number }) {
-  const { room, game, winnerUsername } = item;
+  const { game, winnerUsername } = item;
   const meta = gameStatusMeta(game.status);
   const scheduledAt = game.scheduledAt ?? null;
   const countdown = useCountdown(
     scheduledAt && game.status === "waiting" ? scheduledAt : null,
   );
   const isScheduled = game.status === "waiting" && !!scheduledAt;
-  const prize = game.prize ?? room.prize;
+  const title = game.title || `Sorteo #${game.id}`;
+  const cardPrice = game.cardPrice ?? 5000;
+  const maxPlayers = game.maxPlayers ?? 100;
 
   return (
     <motion.div
@@ -80,7 +79,7 @@ function SorteoCard({ item, index }: { item: LobbyItem; index: number }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: index * 0.07 }}
       className={`group relative bg-card/40 backdrop-blur-md border border-white/10 rounded-2xl md:rounded-3xl transition-all overflow-hidden ${
-        meta.live ? "hover:border-green-500/30" : game.status === "finished" ? "opacity-90" : "hover:border-primary/40"
+        meta.live ? "hover:border-green-500/30" : "hover:border-primary/40"
       }`}
     >
       {meta.live && (
@@ -90,12 +89,12 @@ function SorteoCard({ item, index }: { item: LobbyItem; index: number }) {
       <div className="relative z-10 p-4 md:p-6 flex flex-col h-full">
         <div className="flex justify-between items-start mb-3 md:mb-4">
           <div className="flex-1 min-w-0 mr-2">
-            <h3 className="text-lg md:text-2xl font-bold text-white mb-1 truncate">
-              {game.title || room.name}
-            </h3>
-            <p className="text-white/40 text-xs truncate">{room.name}</p>
-            <Badge variant="outline" className={`${TYPE_COLORS[room.type] || "border-white/20 text-white/50"} text-xs uppercase tracking-wider mt-2`}>
-              {TYPE_LABELS[room.type] || room.type}
+            <h3 className="text-lg md:text-2xl font-bold text-white mb-1 truncate">{title}</h3>
+            {game.description && (
+              <p className="text-white/40 text-xs truncate">{game.description}</p>
+            )}
+            <Badge variant="outline" className={`${TYPE_COLORS[game.type || "classic"] || "border-white/20 text-white/50"} text-xs uppercase tracking-wider mt-2`}>
+              {TYPE_LABELS[game.type || "classic"] || game.type}
             </Badge>
           </div>
           <Badge className={`${meta.badge} flex items-center gap-1 shrink-0`}>
@@ -106,29 +105,25 @@ function SorteoCard({ item, index }: { item: LobbyItem; index: number }) {
           </Badge>
         </div>
 
-        <p className="text-white/50 text-sm mb-4 leading-relaxed line-clamp-2">
-          {room.description || "Sorteo de bingo OroDig."}
-        </p>
-
         <div className="grid grid-cols-2 gap-2 md:gap-3 mb-4">
           <div className="bg-black/40 rounded-xl p-2.5 md:p-3 border border-white/5">
             <span className="text-white/40 text-[10px] md:text-xs uppercase tracking-wider flex items-center gap-1 mb-1">
               <Coins className="w-3 h-3 text-accent" /> Premio
             </span>
-            <span className="text-lg md:text-xl font-bold text-accent">{formatCOP(prize)}</span>
+            <span className="text-lg md:text-xl font-bold text-accent">{formatCOP(game.prize)}</span>
           </div>
           <div className="bg-black/40 rounded-xl p-2.5 md:p-3 border border-white/5">
             <span className="text-white/40 text-[10px] md:text-xs uppercase tracking-wider flex items-center gap-1 mb-1">
               <CreditCard className="w-3 h-3 text-primary" /> Cartón
             </span>
-            <span className="text-lg md:text-xl font-bold text-white">{formatCOP(room.cardPrice)}</span>
+            <span className="text-lg md:text-xl font-bold text-white">{formatCOP(cardPrice)}</span>
           </div>
           <div className="bg-black/40 rounded-xl p-2.5 md:p-3 border border-white/5">
             <span className="text-white/40 text-[10px] md:text-xs uppercase tracking-wider flex items-center gap-1 mb-1">
               <Users className="w-3 h-3 text-primary" /> Jugadores
             </span>
             <span className="text-lg md:text-xl font-bold text-white">
-              {room.playerCount ?? 0}<span className="text-white/30 text-sm">/{room.maxPlayers}</span>
+              {game.playerCount ?? 0}<span className="text-white/30 text-sm">/{maxPlayers}</span>
             </span>
           </div>
           <div className="bg-black/40 rounded-xl p-2.5 md:p-3 border border-white/5">
@@ -136,7 +131,7 @@ function SorteoCard({ item, index }: { item: LobbyItem; index: number }) {
               <Timer className="w-3 h-3 text-primary" /> Intervalo
             </span>
             <span className="text-lg md:text-xl font-bold text-white">
-              {room.ballInterval}<span className="text-white/30 text-sm">s</span>
+              {game.ballInterval}<span className="text-white/30 text-sm">s</span>
             </span>
           </div>
         </div>
@@ -158,7 +153,7 @@ function SorteoCard({ item, index }: { item: LobbyItem; index: number }) {
           <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-3 py-2 mb-3">
             <Radio className="w-4 h-4 text-green-400 animate-pulse shrink-0" />
             <span className="text-green-400 text-sm font-medium">
-              Sorteo en curso · Patrón: {game.patternType}
+              En curso · Patrón: {game.patternType}
             </span>
           </div>
         )}
@@ -166,7 +161,7 @@ function SorteoCard({ item, index }: { item: LobbyItem; index: number }) {
         {game.status === "paused" && (
           <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2 mb-3">
             <Clock className="w-4 h-4 text-orange-400 shrink-0" />
-            <span className="text-orange-400 text-sm font-medium">Sorteo pausado — revisión BINGO</span>
+            <span className="text-orange-400 text-sm font-medium">Pausado — revisión BINGO</span>
           </div>
         )}
 
@@ -184,7 +179,7 @@ function SorteoCard({ item, index }: { item: LobbyItem; index: number }) {
         )}
 
         <div className="mt-auto pt-3 border-t border-white/10">
-          <Link href={`/room/${room.id}`}>
+          <Link href={`/sorteo/${game.id}`}>
             <Button
               className={`w-full font-bold ${
                 game.status === "finished"
@@ -197,7 +192,7 @@ function SorteoCard({ item, index }: { item: LobbyItem; index: number }) {
               {game.status === "finished"
                 ? "Ver resultados"
                 : game.status === "waiting"
-                  ? "Ver sala · Esperando inicio"
+                  ? "Ver sorteo · Esperando inicio"
                   : "🎱 Entrar al sorteo"}
             </Button>
           </Link>
@@ -209,11 +204,14 @@ function SorteoCard({ item, index }: { item: LobbyItem; index: number }) {
 
 export default function Lobby() {
   const [filter, setFilter] = useState<FilterTab>("all");
+  const { user, firebaseSignedIn, isLoading: authLoading } = useAuth();
 
-  const { data: lobbyItems, isLoading } = useQuery({
+  const { data: lobbyItems, isLoading, isError, error } = useQuery({
     queryKey: ["/api/games/lobby"],
     queryFn: () => apiJson<LobbyItem[]>("/api/games/lobby", "GET"),
+    enabled: !!user && firebaseSignedIn && !authLoading,
     refetchInterval: 5000,
+    retry: 1,
   });
 
   const items = lobbyItems ?? [];
@@ -253,9 +251,15 @@ export default function Lobby() {
             )}
           </div>
           <p className="text-white/50 text-sm md:text-base">
-            Solo sorteos activos o recién finalizados. El admin elimina los sorteos del listado.
+            Sorteos activos o recién finalizados. El admin elimina los sorteos del listado.
           </p>
         </div>
+
+        {isError && (
+          <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-300 text-sm">
+            No se pudo cargar los sorteos. {error instanceof Error ? error.message : "Sesión inválida — cierra sesión y vuelve a entrar."}
+          </div>
+        )}
 
         <div className="flex gap-2 mb-6 flex-wrap">
           {[
@@ -287,29 +291,22 @@ export default function Lobby() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {filtered.map((item, i) => (
-              <SorteoCard key={`${item.room.id}-${item.game.id}`} item={item} index={i} />
+              <SorteoCard key={item.game.id} item={item} index={i} />
             ))}
           </div>
         )}
 
-        {filtered.length === 0 && !isLoading && (
+        {filtered.length === 0 && !isLoading && !isError && (
           <div className="text-center py-20">
             <div className="text-5xl mb-4">🎱</div>
             <h3 className="text-xl text-white/40 mb-2">
-              {items.length === 0
-                ? "No hay sorteos visibles"
-                : `No hay sorteos en esta categoría`}
+              {items.length === 0 ? "No hay sorteos visibles" : "No hay sorteos en esta categoría"}
             </h3>
             <p className="text-white/30 text-sm max-w-md mx-auto">
               {items.length === 0
-                ? "Cuando el administrador cree o inicie un sorteo, aparecerá aquí."
-                : "Prueba otro filtro para ver más sorteos."}
+                ? "Crea un sorteo desde Admin → Gestión de sorteos y aparecerá aquí."
+                : "Prueba otro filtro."}
             </p>
-            {filter !== "all" && (
-              <button onClick={() => setFilter("all")} className="text-primary text-sm underline mt-4">
-                Ver todos
-              </button>
-            )}
           </div>
         )}
       </main>

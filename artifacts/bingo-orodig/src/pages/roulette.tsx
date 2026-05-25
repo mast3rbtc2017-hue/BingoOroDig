@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { CircleDot, Trash2, Sparkles, History, Wallet } from "lucide-react";
-import { getMe } from "@workspace/api-client-react";
 import { formatCOP, formatCOPSigned } from "@/lib/currency";
 
 type RouletteConfig = {
@@ -52,7 +51,7 @@ const TABLE_LAYOUT: (number | null)[][] = [
 const CHIP_PRESETS = [1_000, 5_000, 10_000, 25_000, 50_000, 100_000];
 
 export default function RoulettePage() {
-  const { user, login } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [config, setConfig] = useState<RouletteConfig | null>(null);
   const [chip, setChip] = useState(10_000);
   const [bets, setBets] = useState<Bet[]>([]);
@@ -127,15 +126,7 @@ export default function RoulettePage() {
     try {
       const data = await apiJson<SpinResult>("/api/roulette/spin", "POST", { bets });
       setResult(data);
-      const token = localStorage.getItem("bingo_token");
-      if (token) {
-        try {
-          const me = await getMe();
-          login(token, me);
-        } catch {
-          login(token, { ...user, balance: data.newBalance });
-        }
-      }
+      await refreshUser();
     } catch (e: unknown) {
       setSpinning(false);
       toast.error(e instanceof Error ? e.message : "Error al girar");

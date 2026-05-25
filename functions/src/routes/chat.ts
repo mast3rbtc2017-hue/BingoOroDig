@@ -12,7 +12,7 @@ const SendChatBody = z.object({
 function serializeMsg(m: Record<string, unknown>) {
   return {
     id: m.id,
-    roomId: m.roomId,
+    gameId: m.gameId,
     userId: m.userId,
     username: m.username,
     avatarUrl: m.avatarUrl,
@@ -25,11 +25,12 @@ function serializeMsg(m: Record<string, unknown>) {
   };
 }
 
-router.get("/chat/:roomId", requireAuth, async (req, res) => {
-  const roomId = Number(req.params.roomId);
+/** Chat del sorteo (gameId) */
+router.get("/chat/:gameId", requireAuth, async (req, res) => {
+  const gameId = Number(req.params.gameId);
   const snap = await db
-    .collection("rooms")
-    .doc(String(roomId))
+    .collection("games")
+    .doc(String(gameId))
     .collection("messages")
     .orderBy("createdAt")
     .limit(100)
@@ -37,8 +38,8 @@ router.get("/chat/:roomId", requireAuth, async (req, res) => {
   res.json(snap.docs.map((d) => serializeMsg({ id: Number(d.id) || d.id, ...d.data() })));
 });
 
-router.post("/chat/:roomId", requireAuth, async (req: AuthedRequest, res) => {
-  const roomId = Number(req.params.roomId);
+router.post("/chat/:gameId", requireAuth, async (req: AuthedRequest, res) => {
+  const gameId = Number(req.params.gameId);
   const body = SendChatBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: "Invalid request" });
@@ -48,7 +49,7 @@ router.post("/chat/:roomId", requireAuth, async (req: AuthedRequest, res) => {
   const msgId = await nextId("messages");
   const msg = {
     id: msgId,
-    roomId,
+    gameId,
     userId: req.userId,
     username: req.userProfile?.username ?? "Unknown",
     avatarUrl: req.userProfile?.avatarUrl ?? null,
@@ -57,7 +58,12 @@ router.post("/chat/:roomId", requireAuth, async (req: AuthedRequest, res) => {
     createdAt: FieldValue.serverTimestamp(),
   };
 
-  await db.collection("rooms").doc(String(roomId)).collection("messages").doc(String(msgId)).set(msg);
+  await db
+    .collection("games")
+    .doc(String(gameId))
+    .collection("messages")
+    .doc(String(msgId))
+    .set(msg);
 
   res.status(201).json(serializeMsg({ ...msg, createdAt: new Date() }));
 });

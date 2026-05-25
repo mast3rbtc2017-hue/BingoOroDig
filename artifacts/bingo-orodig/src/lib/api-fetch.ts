@@ -1,3 +1,5 @@
+import { auth } from "./firebase";
+
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)
   ?.trim()
   .replace(/\/+$/, "") ?? "";
@@ -8,8 +10,18 @@ export function apiUrl(path: string): string {
   return API_BASE ? `${API_BASE}${normalized}` : normalized;
 }
 
+async function authBearer(): Promise<string | null> {
+  const user = auth.currentUser;
+  if (!user) return null;
+  try {
+    return await user.getIdToken();
+  } catch {
+    return null;
+  }
+}
+
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const token = localStorage.getItem("bingo_token");
+  const token = await authBearer();
   const headers = new Headers(init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");

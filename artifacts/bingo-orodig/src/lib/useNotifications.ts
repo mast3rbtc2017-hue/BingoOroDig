@@ -15,14 +15,14 @@ export type AppNotification = {
 };
 
 export function useNotifications() {
-  const { user } = useAuth();
+  const { user, firebaseSignedIn, isLoading: authLoading } = useAuth();
   const seenRef = useRef<Set<number>>(new Set());
   const initializedRef = useRef(false);
 
   const query = useQuery({
     queryKey: ["/api/notifications"],
     queryFn: () => apiJson<AppNotification[]>("/api/notifications", "GET"),
-    enabled: !!user,
+    enabled: !!user && firebaseSignedIn && !authLoading,
     refetchInterval: 8000,
   });
 

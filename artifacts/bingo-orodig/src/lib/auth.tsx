@@ -7,7 +7,8 @@ import { auth, authEmailForUsername } from "./firebase";
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (token: string, user: User) => void;
+  firebaseSignedIn: boolean;
+  refreshUser: () => Promise<void>;
   loginWithPassword: (username: string, password: string) => Promise<void>;
   registerWithToken: (token: string, user: User) => Promise<void>;
   logout: () => void;
@@ -56,10 +57,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [me, error, hasFirebaseUser]);
 
-  const login = (newToken: string, newUser: User) => {
-    localStorage.setItem("bingo_token", newToken);
-    setUser(newUser);
-  };
+  const refreshUser = useCallback(async () => {
+    if (!auth.currentUser) return;
+    const profile = await getMe();
+    setUser(profile);
+  }, []);
 
   const loginWithPassword = useCallback(async (username: string, password: string) => {
     const cred = await signInWithEmailAndPassword(
@@ -92,7 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoading: !authReady || (hasFirebaseUser && meLoading),
-        login,
+        firebaseSignedIn: hasFirebaseUser,
+        refreshUser,
         loginWithPassword,
         registerWithToken,
         logout,

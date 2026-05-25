@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useParams, Link } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { useGetRoom, useGetGame, useListMyCards, useSendChatMessage, useBuyCard } from "@workspace/api-client-react";
-import { useGameDrawnNumbers, useGameLive, useGameWinner, useRoomLive, useRoomMessages } from "@/lib/realtime";
+import { useGetGame, useListMyCards, useSendChatMessage, useBuyCard } from "@workspace/api-client-react";
+import { useGameDrawnNumbers, useGameLive, useGameWinner, useGameMessages } from "@/lib/realtime";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,9 +32,9 @@ const STATUS_COLORS: Record<string, string> = {
   active: "bg-blue-500/20 text-blue-400 border-blue-500/30",
 };
 
-export default function Room() {
+export default function SorteoPage() {
   const { id } = useParams();
-  const roomId = parseInt(id!);
+  const gameId = parseInt(id!);
   const { user } = useAuth();
 
   const [playerCount, setPlayerCount] = useState(0);
@@ -47,17 +47,10 @@ export default function Room() {
   const [unread, setUnread] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { data: room, refetch: refetchRoom } = useGetRoom(roomId, {
-    query: { enabled: !!roomId, queryKey: ["/api/rooms", roomId], refetchInterval: 5000 },
-  });
-  const activeGameId =
-    room?.currentGameId != null && room.currentGameId > 0
-      ? room.currentGameId
-      : undefined;
-  const { data: game, refetch: refetchGame } = useGetGame(activeGameId ?? 0, {
+  const { data: game, refetch: refetchGame } = useGetGame(gameId, {
     query: {
-      enabled: !!activeGameId,
-      queryKey: ["/api/games", activeGameId],
+      enabled: !!gameId,
+      queryKey: ["/api/games", gameId],
       retry: false,
       refetchInterval: 5000,
     },
@@ -70,36 +63,31 @@ export default function Room() {
     query: { enabled: !!user, queryKey: ["/api/cards"] }
   });
 
-  const roomCards = cards?.filter(c => c.roomId === roomId) || [];
-  const gameCards = roomCards.filter(c => c.gameId === room?.currentGameId);
+  const gameCards = cards?.filter((c) => c.gameId === gameId) || [];
   const buyCardMutation = useBuyCard();
   const sendChatMutation = useSendChatMessage();
-  const liveDrawn = useGameDrawnNumbers(activeGameId);
-  const chatMessages = useRoomMessages(roomId);
-  const winner = useGameWinner(activeGameId);
+  const liveDrawn = useGameDrawnNumbers(gameId);
+  const chatMessages = useGameMessages(gameId);
+  const winner = useGameWinner(gameId);
 
   const allDrawn = liveDrawn;
-
-  const onRoomUpdate = useCallback(() => {
-    refetchRoom();
-    refetchCards();
-  }, [refetchRoom, refetchCards]);
 
   const onGameUpdate = useCallback(() => {
     refetchGame();
     refetchCards();
   }, [refetchGame, refetchCards]);
 
-  useRoomLive(roomId, onRoomUpdate);
-  useGameLive(activeGameId, onGameUpdate);
+  useGameLive(gameId, onGameUpdate);
 
   useEffect(() => {
     resumeAudio();
   }, []);
 
   useEffect(() => {
-    if (room?.playerCount != null) setPlayerCount(room.playerCount);
-  }, [room?.playerCount]);
+    if ((game as { playerCount?: number })?.playerCount != null) {
+      setPlayerCount((game as { playerCount?: number }).playerCount!);
+    }
+  }, [game]);
 
   useEffect(() => {
     if (allDrawn.length > prevBallCount && prevBallCount > 0) {
@@ -114,9 +102,8 @@ export default function Room() {
     setWinnerDismissed(false);
     sounds.win();
     triggerConfetti();
-    refetchRoom();
     refetchGame();
-  }, [winner, refetchRoom, refetchGame]);
+  }, [winner, refetchGame]);
 
   useEffect(() => {
     if (chatMessages.length === 0) return;
@@ -144,11 +131,11 @@ export default function Room() {
   };
 
   const handleBuyCard = () => {
-    if (!room?.currentGameId) { toast.error("No hay una partida creada en esta sala."); return; }
-    if (game?.status === "finished") { toast.error("La partida ya terminó."); return; }
+    if (!gameId) return;
+    if (game?.status === "finished") { toast.error("El sorteo ya terminó."); return; }
     sounds.buy();
     buyCardMutation.mutate(
-      { data: { gameId: room.currentGameId, quantity: 1 } },
+      { data: { gameId, quantity: 1 } },
       { onSuccess: () => { toast.success("¡Cartón comprado!"); refetchCards(); }, onError: (err) => toast.error(err.message) }
     );
   };
@@ -172,7 +159,6 @@ export default function Room() {
       }
       refetchCards();
       refetchGame();
-      refetchRoom();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error al reclamar");
     } finally {
@@ -190,14 +176,16 @@ export default function Room() {
     e.preventDefault();
     if (!chatInput.trim()) return;
     sounds.click();
-    sendChatMutation.mutate({ roomId, data: { content: chatInput } }, { onSuccess: () => setChatInput("") });
+    sendChatMutation.mutate({ roomId: gameId, data: { content: chatInput } }, { onSuccess: () => setChatInput("") });
   };
 
   const currentBall = allDrawn.length > 0 ? allDrawn[allDrawn.length - 1] : null;
   const isFinished = game?.status === "finished";
-  const canBuyCard = !!room?.currentGameId && !isFinished && game?.status !== "paused";
-  const claimPattern = game?.patternType || room?.patternType || "line";
-  const gameStatus = game?.status || room?.status || "active";
+  const canBuyCard = !!gameId && !isFinished && game?.status !== "paused";
+  const claimPattern = game?.patternType || "line";
+  const gameStatus = game?.status || "waiting";
+  const cardPrice = (game as { cardPrice?: number })?.cardPrice ?? 5000;
+  const sorteoTitle = game?.title || `Sorteo #${gameId}`;
   const drawnPct = Math.round((allDrawn.length / 75) * 100);
 
   return (
@@ -212,7 +200,7 @@ export default function Room() {
               initial={{ width: 0 }} animate={{ width: `${drawnPct}%` }} transition={{ duration: 0.4 }} />
           </div>
           <div className="container mx-auto px-3 py-1.5 flex items-center justify-between text-xs text-white/40">
-            <span>Sala: <span className="text-white/70">{room?.name}</span></span>
+            <span>Sorteo: <span className="text-white/70">{sorteoTitle}</span></span>
             <span className="flex items-center gap-2">
               <Badge className={`${STATUS_COLORS[gameStatus]} text-[10px] py-0 h-5`}>{STATUS_LABELS[gameStatus]}</Badge>
               <span>{allDrawn.length}/75 bolas</span>
@@ -231,13 +219,13 @@ export default function Room() {
             <div className="flex items-start justify-between bg-card/80 backdrop-blur border border-white/10 p-3 md:p-4 rounded-xl md:rounded-2xl gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg md:text-2xl font-bold text-white truncate">{room?.name}</h2>
+                  <h2 className="text-lg md:text-2xl font-bold text-white truncate">{sorteoTitle}</h2>
                   <Badge className={`${STATUS_COLORS[gameStatus]} text-xs hidden sm:flex`}>{STATUS_LABELS[gameStatus]}</Badge>
                 </div>
                 <p className="text-xs md:text-sm text-white/50 mt-0.5 flex flex-wrap gap-x-2">
-                  <span>Premio: <span className="text-accent font-bold">{formatCOP(room?.prize ?? 0)}</span></span>
-                  <span>Patrón: <span className="text-primary">{PATTERN_LABELS[room?.patternType || ""] || room?.patternType}</span></span>
-                  <span>Cartón: <span className="text-white/70">{formatCOP(room?.cardPrice ?? 0)}</span></span>
+                  <span>Premio: <span className="text-accent font-bold">{formatCOP(game?.prize ?? 0)}</span></span>
+                  <span>Patrón: <span className="text-primary">{PATTERN_LABELS[game?.patternType || ""] || game?.patternType}</span></span>
+                  <span>Cartón: <span className="text-white/70">{formatCOP(cardPrice)}</span></span>
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -284,7 +272,7 @@ export default function Room() {
                 <span>Sorteo en vivo</span>
                 <span className="text-white/30">·</span>
                 <Timer className="w-3.5 h-3.5" />
-                <span>Bola cada {game.ballInterval ?? room?.ballInterval ?? 5}s</span>
+                <span>Bola cada {game.ballInterval ?? 5}s</span>
                 <span className="text-white/30">·</span>
                 <span>{allDrawn.length}/75 bolas</span>
               </div>
@@ -331,22 +319,20 @@ export default function Room() {
             <div className="flex items-center justify-between bg-black/40 border border-white/5 rounded-xl p-3">
               <div>
                 <p className="text-sm font-bold text-white">Mis Cartones <span className="text-primary">({gameCards.length})</span></p>
-                {!room?.currentGameId && <p className="text-xs text-white/30">Sin partida activa</p>}
+                {gameStatus === "waiting" && !isScheduledWaiting && (
+                  <p className="text-xs text-white/30">Esperando inicio del sorteo</p>
+                )}
               </div>
               <Button onClick={handleBuyCard} disabled={!canBuyCard || buyCardMutation.isPending}
                 className="bg-gradient-to-r from-primary to-accent text-black font-bold text-sm h-9 px-4 hover:scale-105 transition-transform">
-                {buyCardMutation.isPending ? "..." : `+ Cartón (${formatCOP(room?.cardPrice ?? 0)})`}
+                {buyCardMutation.isPending ? "..." : `+ Cartón (${formatCOP(cardPrice)})`}
               </Button>
             </div>
           </div>
 
           {/* Cards grid */}
           <div className="flex-1 px-3 md:px-5 pb-6">
-            {!room?.currentGameId ? (
-              <div className="h-32 flex items-center justify-center text-white/30 border-2 border-dashed border-white/10 rounded-2xl">
-                <p className="text-sm text-center px-4">El administrador debe crear una partida</p>
-              </div>
-            ) : gameCards.length === 0 ? (
+            {gameCards.length === 0 ? (
               <div className="h-32 flex items-center justify-center border-2 border-dashed border-white/10 rounded-2xl">
                 <div className="text-center">
                   <p className="text-white/40 text-sm">Sin cartones para esta partida</p>

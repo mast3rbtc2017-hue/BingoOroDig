@@ -1,19 +1,14 @@
 import { Router } from "express";
 import { db, FieldValue, nextId, Timestamp } from "../lib/firestore";
 import { requireAuth, requireAdmin, type AuthedRequest } from "../lib/auth";
-import {
-  getGame,
-  getRoom,
-  serializeGame,
-  startAutoTimer,
-  stopAutoTimer,
-} from "../lib/autoDraw";
+import { getGame, serializeGame, stopAutoTimer, startAutoTimer } from "../lib/autoDraw";
 import {
   ballIntervalSecs,
   processScheduledGames,
   shouldAutoDrawBalls,
   startGameById,
 } from "../lib/scheduler";
+import { syncGameSettings } from "../lib/gameMeta";
 import { drawBallForGame, serializeDrawn } from "../lib/gameLogic";
 import { getUserByLegacyId } from "../lib/auth";
 import {
@@ -30,36 +25,30 @@ router.get("/games", requireAuth, async (_req, res) => {
   res.json(snap.docs.map((d) => serializeGame({ id: Number(d.id), ...d.data() })));
 });
 
-/** Sorteos visibles en el lobby de jugadores (sala con partida activa o recién finalizada) */
+const LOBBY_STATUSES = ["waiting", "playing", "paused", "finished"];
+
+/** Sorteos visibles en el lobby (sin salas) */
 router.get("/games/lobby", requireAuth, async (_req, res) => {
   await processScheduledGames();
-  const roomsSnap = await db.collection("rooms").get();
+  const snap = await db.collection("games").get();
   const items: Array<{
-    room: ReturnType<typeof serializeLobbyRoom>;
     game: ReturnType<typeof serializeGame>;
     winnerUsername: string | null;
   }> = [];
 
-  for (const roomDoc of roomsSnap.docs) {
-    const roomRaw = { id: Number(roomDoc.id), ...roomDoc.data() } as Record<string, unknown> & {
-      id: number;
-      currentGameId?: number | null;
-    };
-    const gameId = roomRaw.currentGameId;
-    if (!gameId) continue;
-
-    const game = await getGame(gameId);
-    if (!game) continue;
+  for (const doc of snap.docs) {
+    const raw = { id: Number(doc.id), ...doc.data() } as Record<string, unknown>;
+    const status = raw.status as string;
+    if (!LOBBY_STATUSES.includes(status)) continue;
 
     let winnerUsername: string | null = null;
-    if (game.winnerId) {
-      const winner = await getUserByLegacyId(game.winnerId as number);
+    if (raw.winnerId) {
+      const winner = await getUserByLegacyId(raw.winnerId as number);
       winnerUsername = winner?.username ?? null;
     }
 
     items.push({
-      room: serializeLobbyRoom(roomRaw),
-      game: serializeGame(game),
+      game: serializeGame(raw),
       winnerUsername,
     });
   }
@@ -78,63 +67,50 @@ router.get("/games/lobby", requireAuth, async (_req, res) => {
   res.json(items);
 });
 
-function serializeLobbyRoom(r: Record<string, unknown>) {
-  return {
-    id: r.id,
-    name: r.name,
-    description: r.description,
-    type: r.type,
-    status: r.status,
-    cardPrice: r.cardPrice,
-    maxPlayers: r.maxPlayers,
-    ballInterval: r.ballInterval,
-    prize: r.prize,
-    patternType: r.patternType,
-    playerCount: r.playerCount,
-    currentGameId: r.currentGameId ?? null,
-  };
-}
-
 router.post("/games/tick-schedule", requireAuth, async (_req, res) => {
   const started = await processScheduledGames();
   res.json({ started });
 });
 
 router.post("/games", requireAdmin, async (req, res) => {
-  const { roomId, title, description, mode, patternType, prize, ballInterval, scheduledAt } =
-    req.body;
-  if (!roomId) {
-    res.status(400).json({ error: "roomId requerido" });
-    return;
-  }
+  const {
+    title,
+    description,
+    mode,
+    patternType,
+    prize,
+    ballInterval,
+    cardPrice,
+    maxPlayers,
+    type,
+    scheduledAt,
+  } = req.body;
 
-  const room = await getRoom(Number(roomId));
-  if (!room) {
-    res.status(404).json({ error: "Sala no encontrada" });
+  if (!title || !String(title).trim()) {
+    res.status(400).json({ error: "El título del sorteo es obligatorio" });
     return;
-  }
-
-  if (room.currentGameId) {
-    await db
-      .collection("games")
-      .doc(String(room.currentGameId))
-      .update({ status: "finished", finishedAt: FieldValue.serverTimestamp() });
-    stopAutoTimer(room.currentGameId as number);
   }
 
   const gameId = await nextId("games");
+  const meta = syncGameSettings({
+    cardPrice: cardPrice != null ? Number(cardPrice) : undefined,
+    maxPlayers: maxPlayers != null ? Number(maxPlayers) : undefined,
+    ballInterval: ballInterval != null ? Number(ballInterval) : undefined,
+    prize: prize != null ? Number(prize) : undefined,
+    patternType: patternType ?? "line",
+    type: type ?? "classic",
+  });
+
   const game = {
     id: gameId,
-    roomId: Number(roomId),
-    title: title || null,
-    description: description || null,
+    title: String(title).trim(),
+    description: description ? String(description) : null,
     mode: mode || "manual",
-    patternType: patternType ?? room.patternType,
-    prize: prize != null ? Number(prize) : room.prize,
-    ballInterval: ballInterval != null ? Number(ballInterval) : room.ballInterval,
+    ...meta,
     status: "waiting",
     winnerId: null,
     winnerCardId: null,
+    pendingReview: false,
     scheduledAt: scheduledAt
       ? Timestamp.fromDate(new Date(scheduledAt as string))
       : null,
@@ -145,11 +121,6 @@ router.post("/games", requireAdmin, async (req, res) => {
   };
 
   await db.collection("games").doc(String(gameId)).set(game);
-  await db.collection("rooms").doc(String(roomId)).update({
-    currentGameId: gameId,
-    status: "playing",
-    updatedAt: FieldValue.serverTimestamp(),
-  });
 
   res.status(201).json(serializeGame({ ...game, createdAt: new Date() }));
 });
@@ -194,17 +165,19 @@ router.delete("/games/:id", requireAdmin, async (req, res) => {
   }
   stopAutoTimer(id);
 
-  const roomsSnap = await db.collection("rooms").where("currentGameId", "==", id).get();
+  const gameRef = db.collection("games").doc(String(id));
   const batch = db.batch();
-  for (const r of roomsSnap.docs) {
-    batch.update(r.ref, { currentGameId: null, status: "active" });
+
+  const subcols = ["drawnNumbers", "winners", "bingoClaims", "messages"] as const;
+  for (const sub of subcols) {
+    const snap = await gameRef.collection(sub).get();
+    for (const d of snap.docs) batch.delete(d.ref);
   }
 
-  const drawn = await db.collection("games").doc(String(id)).collection("drawnNumbers").get();
-  for (const d of drawn.docs) batch.delete(d.ref);
-  const winners = await db.collection("games").doc(String(id)).collection("winners").get();
-  for (const w of winners.docs) batch.delete(w.ref);
-  batch.delete(db.collection("games").doc(String(id)));
+  const cards = await db.collection("cards").where("gameId", "==", id).get();
+  for (const c of cards.docs) batch.delete(c.ref);
+
+  batch.delete(gameRef);
   await batch.commit();
 
   res.json({ ok: true });
@@ -223,8 +196,6 @@ router.post("/games/:id/control", requireAdmin, async (req, res) => {
     res.status(404).json({ error: "Partida no encontrada" });
     return;
   }
-  const room = await getRoom(game.roomId as number);
-
   let updateData: Record<string, unknown> = {
     updatedAt: FieldValue.serverTimestamp(),
   };
@@ -253,8 +224,8 @@ router.post("/games/:id/control", requireAdmin, async (req, res) => {
         return;
       }
       updateData.status = "playing";
-      if (shouldAutoDrawBalls(game, room)) {
-        startAutoTimer(id, game.roomId as number, ballIntervalSecs(game, room));
+      if (shouldAutoDrawBalls(game)) {
+        startAutoTimer(id, ballIntervalSecs(game));
       }
       break;
     case "finish":
@@ -264,10 +235,6 @@ router.post("/games/:id/control", requireAdmin, async (req, res) => {
         finishedAt: FieldValue.serverTimestamp(),
       };
       stopAutoTimer(id);
-      await db.collection("rooms").doc(String(game.roomId)).update({
-        status: "active",
-        updatedAt: FieldValue.serverTimestamp(),
-      });
       break;
     case "restart": {
       const drawn = await db.collection("games").doc(String(id)).collection("drawnNumbers").get();
@@ -312,7 +279,7 @@ router.post("/games/:id/draw", requireAdmin, async (req, res) => {
     res.status(400).json({ error: "La partida no está activa" });
     return;
   }
-  const result = await drawBallForGame(id, game.roomId as number);
+  const result = await drawBallForGame(id);
   if (!result) {
     res.status(400).json({ error: "No se pudo sortear" });
     return;

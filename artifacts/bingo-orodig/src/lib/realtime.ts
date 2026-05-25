@@ -35,23 +35,24 @@ export function useGameDrawnNumbers(gameId: number | null | undefined) {
   return balls;
 }
 
-export function useRoomMessages(roomId: number | null | undefined) {
+/** Chat en vivo del sorteo (games/{gameId}/messages) */
+export function useGameMessages(gameId: number | null | undefined) {
   const [messages, setMessages] = useState<unknown[]>([]);
 
   useEffect(() => {
-    if (!roomId) {
+    if (!gameId) {
       setMessages([]);
       return;
     }
     const q = query(
-      collection(firestore, "rooms", String(roomId), "messages"),
+      collection(firestore, "games", String(gameId), "messages"),
       orderBy("createdAt"),
     );
     return onSnapshot(q, (snap) => {
       setMessages(
         snap.docs.map((d) => ({
           id: d.data().id ?? d.id,
-          roomId: d.data().roomId,
+          gameId: d.data().gameId,
           userId: d.data().userId,
           username: d.data().username,
           avatarUrl: d.data().avatarUrl,
@@ -61,10 +62,13 @@ export function useRoomMessages(roomId: number | null | undefined) {
         })),
       );
     });
-  }, [roomId]);
+  }, [gameId]);
 
   return messages;
 }
+
+/** @deprecated usar useGameMessages */
+export const useRoomMessages = useGameMessages;
 
 export function useGameBingoClaims(gameId: number | null | undefined) {
   const [claims, setClaims] = useState<unknown[]>([]);
@@ -121,13 +125,6 @@ export function useGameWinner(gameId: number | null | undefined) {
   return winner;
 }
 
-export function useRoomLive(roomId: number | null | undefined, onChange: () => void) {
-  useEffect(() => {
-    if (!roomId) return;
-    const unsubRoom = onSnapshot(doc(firestore, "rooms", String(roomId)), onChange);
-    return () => unsubRoom();
-  }, [roomId, onChange]);
-}
 
 export function useGameLive(gameId: number | null | undefined, onChange: () => void) {
   useEffect(() => {

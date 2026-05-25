@@ -3,11 +3,11 @@ import { drawBallForGame } from "./gameLogic";
 
 const autoDrawTimers = new Map<number, ReturnType<typeof setInterval>>();
 
-export function startAutoTimer(gameId: number, roomId: number, intervalSecs: number): void {
+export function startAutoTimer(gameId: number, intervalSecs: number): void {
   stopAutoTimer(gameId);
   const ms = Math.max(intervalSecs * 1000, 2000);
   const timer = setInterval(() => {
-    void drawBallForGame(gameId, roomId).catch(console.error);
+    void drawBallForGame(gameId).catch(console.error);
   }, ms);
   autoDrawTimers.set(gameId, timer);
 }
@@ -35,7 +35,6 @@ export async function getRoom(roomId: number) {
 export function serializeGame(g: Record<string, unknown>) {
   return {
     id: g.id,
-    roomId: g.roomId,
     title: g.title ?? null,
     description: g.description ?? null,
     mode: g.mode ?? "manual",
@@ -43,6 +42,10 @@ export function serializeGame(g: Record<string, unknown>) {
     patternType: g.patternType,
     ballInterval: g.ballInterval,
     prize: g.prize,
+    cardPrice: g.cardPrice ?? null,
+    maxPlayers: g.maxPlayers ?? null,
+    playerCount: g.playerCount ?? 0,
+    type: g.type ?? "classic",
     winnerId: g.winnerId ?? null,
     winnerCardId: g.winnerCardId ?? null,
     scheduledAt: g.scheduledAt instanceof Timestamp ? g.scheduledAt.toDate().toISOString() : g.scheduledAt ?? null,

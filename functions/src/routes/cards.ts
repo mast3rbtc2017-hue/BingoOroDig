@@ -3,7 +3,8 @@ import { z } from "zod";
 import { db, FieldValue, nextId, Timestamp } from "../lib/firestore";
 import { requireAuth, type AuthedRequest } from "../lib/auth";
 import { generateCard, nextColorTheme } from "../lib/bingo";
-import { getGame, getRoom } from "../lib/autoDraw";
+import { getGame } from "../lib/autoDraw";
+import { resolveGameSettings } from "../lib/gameMeta";
 import { submitBingoClaim } from "../lib/bingoClaims";
 
 const router = Router();
@@ -64,14 +65,10 @@ router.post("/cards", requireAuth, async (req: AuthedRequest, res) => {
     return;
   }
 
-  const room = await getRoom(game.roomId as number);
-  if (!room) {
-    res.status(404).json({ error: "Sala no encontrada" });
-    return;
-  }
+  const settings = await resolveGameSettings(game);
 
   const qty = body.data.quantity ?? 1;
-  const totalCost = (room.cardPrice as number) * qty;
+  const totalCost = settings.cardPrice * qty;
   const userRef = db.collection("users").doc(req.userUid!);
   const userSnap = await userRef.get();
   const user = userSnap.data()!;
@@ -86,7 +83,7 @@ router.post("/cards", requireAuth, async (req: AuthedRequest, res) => {
     userId: user.id,
     type: "purchase",
     amount: totalCost,
-    description: `Compra de ${qty} cartón(es) — Sala ${room.name}`,
+    description: `Compra de ${qty} cartón(es) — ${(game.title as string) || `Sorteo #${body.data.gameId}`}`,
     createdAt: FieldValue.serverTimestamp(),
   });
 
@@ -99,7 +96,7 @@ router.post("/cards", requireAuth, async (req: AuthedRequest, res) => {
       userId: user.id,
       userUid: req.userUid,
       gameId: body.data.gameId,
-      roomId: game.roomId,
+      roomId: body.data.gameId,
       numbers: JSON.stringify(grid),
       markedNumbers: "[]",
       isWinner: false,

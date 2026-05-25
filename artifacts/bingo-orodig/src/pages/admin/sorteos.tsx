@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useListGames, useListRooms } from "@workspace/api-client-react";
+import { useListGames } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,15 +36,22 @@ const STATUS_LABELS: Record<string, string> = {
 
 type FilterTab = "all" | "waiting" | "playing" | "paused" | "finished";
 
+const TYPE_OPTIONS = [
+  { value: "classic", label: "Clásico" },
+  { value: "fast", label: "Rápido" },
+  { value: "vip", label: "VIP" },
+  { value: "automatic", label: "Automático" },
+];
+
 type FormState = {
-  title: string; description: string; roomId: string; mode: string;
-  patternType: string; prize: string; ballInterval: string; scheduledAt: string;
+  title: string; description: string; mode: string;
+  patternType: string; prize: string; ballInterval: string;
+  cardPrice: string; maxPlayers: string; type: string; scheduledAt: string;
 };
 
-function SorteoFormPanel({ form, setForm, rooms, onSubmit, saving, isEdit }: {
+function SorteoFormPanel({ form, setForm, onSubmit, saving, isEdit }: {
   form: FormState;
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
-  rooms: any[] | undefined;
   onSubmit: (e: React.FormEvent) => void;
   saving: boolean;
   isEdit: boolean;
@@ -63,11 +70,10 @@ function SorteoFormPanel({ form, setForm, rooms, onSubmit, saving, isEdit }: {
             onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
         </div>
         <div className="space-y-1">
-          <Label className="text-white/70">Sala <span className="text-red-400">*</span></Label>
+          <Label className="text-white/70">Tipo de sorteo</Label>
           <select className="w-full h-10 rounded-md bg-black/40 border border-white/10 text-white px-3"
-            value={form.roomId} onChange={e => setForm(f => ({ ...f, roomId: e.target.value }))} required disabled={isEdit}>
-            <option value="">Seleccionar sala...</option>
-            {rooms?.map((r: any) => <option key={r.id} value={r.id}>{r.name} ({formatCOP(r.prize)})</option>)}
+            value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+            {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div className="space-y-1">
@@ -81,6 +87,16 @@ function SorteoFormPanel({ form, setForm, rooms, onSubmit, saving, isEdit }: {
           <Label className="text-white/70">Premio (COP)</Label>
           <Input type="number" className="bg-black/40 border-white/10 text-white" value={form.prize}
             onChange={e => setForm(f => ({ ...f, prize: e.target.value }))} min={1} />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-white/70">Precio cartón (COP)</Label>
+          <Input type="number" className="bg-black/40 border-white/10 text-white" value={form.cardPrice}
+            onChange={e => setForm(f => ({ ...f, cardPrice: e.target.value }))} min={1000} />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-white/70">Máx. jugadores</Label>
+          <Input type="number" className="bg-black/40 border-white/10 text-white" value={form.maxPlayers}
+            onChange={e => setForm(f => ({ ...f, maxPlayers: e.target.value }))} min={2} />
         </div>
         <div className="space-y-1">
           <Label className="text-white/70">Intervalo bolas (seg)</Label>
@@ -115,8 +131,9 @@ function SorteoFormPanel({ form, setForm, rooms, onSubmit, saving, isEdit }: {
 }
 
 const blankForm: FormState = {
-  title: "", description: "", roomId: "", mode: "live", patternType: "line",
-  prize: "50000", ballInterval: "8", scheduledAt: "",
+  title: "", description: "", mode: "live", patternType: "line",
+  prize: "50000", cardPrice: "5000", maxPlayers: "100", type: "classic",
+  ballInterval: "8", scheduledAt: "",
 };
 
 export default function AdminSorteos({ autoCreate = false }: { autoCreate?: boolean }) {
@@ -130,8 +147,6 @@ export default function AdminSorteos({ autoCreate = false }: { autoCreate?: bool
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const { data: games, refetch } = useListGames({ query: { queryKey: ["/api/games"] } });
-  const { data: rooms } = useListRooms({ query: { queryKey: ["/api/rooms"] } });
-
   const filtered = (games || []).filter(g => {
     const matchTab = tab === "all" || g.status === tab;
     const matchSearch = !search || ((g as any).title || `Sorteo #${g.id}`).toLowerCase().includes(search.toLowerCase());
@@ -151,13 +166,14 @@ export default function AdminSorteos({ autoCreate = false }: { autoCreate?: bool
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.roomId) { toast.error("Selecciona una sala"); return; }
+    if (!form.title.trim()) { toast.error("El título es obligatorio"); return; }
     setSaving(true);
     try {
       const body = {
-        roomId: Number(form.roomId), title: form.title, description: form.description,
+        title: form.title, description: form.description,
         mode: form.mode, patternType: form.patternType, prize: Number(form.prize),
-        ballInterval: Number(form.ballInterval),
+        cardPrice: Number(form.cardPrice), maxPlayers: Number(form.maxPlayers),
+        type: form.type, ballInterval: Number(form.ballInterval),
         scheduledAt: form.scheduledAt
           ? new Date(form.scheduledAt).toISOString()
           : undefined,
@@ -209,9 +225,9 @@ export default function AdminSorteos({ autoCreate = false }: { autoCreate?: bool
   const openEdit = (g: any) => {
     setForm({
       title: g.title || "", description: g.description || "",
-      roomId: String(g.roomId), mode: g.mode || "manual",
-      patternType: g.patternType, prize: String(g.prize),
-      ballInterval: String(g.ballInterval),
+      mode: g.mode || "manual", patternType: g.patternType, prize: String(g.prize),
+      cardPrice: String(g.cardPrice ?? 5000), maxPlayers: String(g.maxPlayers ?? 100),
+      type: g.type || "classic", ballInterval: String(g.ballInterval),
       scheduledAt: g.scheduledAt ? g.scheduledAt.slice(0, 16) : "",
     });
     setEditGame(g);
@@ -274,7 +290,7 @@ export default function AdminSorteos({ autoCreate = false }: { autoCreate?: bool
                       </Badge>
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-white/50">
-                      <span>Sala #{game.roomId}</span>
+                      <span>Cartón {formatCOP(game.cardPrice ?? 5000)}</span>
                       <span className="text-accent font-bold">Premio: {formatCOP(game.prize)}</span>
                       <span>Patrón: {PATTERN_OPTIONS.find(p => p.value === game.patternType)?.label || game.patternType}</span>
                       {game.scheduledAt && (
@@ -362,7 +378,7 @@ export default function AdminSorteos({ autoCreate = false }: { autoCreate?: bool
           <DialogHeader>
             <DialogTitle className="text-xl text-white">Crear Nuevo Sorteo</DialogTitle>
           </DialogHeader>
-          <SorteoFormPanel form={form} setForm={setForm} rooms={rooms} onSubmit={handleSave} saving={saving} isEdit={false} />
+          <SorteoFormPanel form={form} setForm={setForm} onSubmit={handleSave} saving={saving} isEdit={false} />
         </DialogContent>
       </Dialog>
 
@@ -372,7 +388,7 @@ export default function AdminSorteos({ autoCreate = false }: { autoCreate?: bool
           <DialogHeader>
             <DialogTitle className="text-xl text-white">Editar Sorteo #{editGame?.id}</DialogTitle>
           </DialogHeader>
-          <SorteoFormPanel form={form} setForm={setForm} rooms={rooms} onSubmit={handleSave} saving={saving} isEdit={true} />
+          <SorteoFormPanel form={form} setForm={setForm} onSubmit={handleSave} saving={saving} isEdit={true} />
         </DialogContent>
       </Dialog>
     </div>

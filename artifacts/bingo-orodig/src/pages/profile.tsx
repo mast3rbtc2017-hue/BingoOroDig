@@ -23,7 +23,7 @@ const TX_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function Profile() {
-  const { user, login } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [depositing, setDepositing] = useState<number | null>(null);
 
   const { data: transactions, refetch: refetchTx } = useListMyTransactions({
@@ -44,9 +44,8 @@ export default function Profile() {
   const handleDeposit = async (amount: number) => {
     setDepositing(amount);
     try {
-      const data = await apiJson<{ newBalance: number }>("/api/transactions/deposit", "POST", { amount });
-      const token = localStorage.getItem("bingo_token");
-      login(token!, { ...user, balance: data.newBalance });
+      await apiJson<{ newBalance: number }>("/api/transactions/deposit", "POST", { amount });
+      await refreshUser();
       toast.success(`✅ ${formatCOPSigned(amount)} agregados a tu saldo`);
       refetchTx();
     } catch (e: unknown) {
