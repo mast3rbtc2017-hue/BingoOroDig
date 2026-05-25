@@ -11,8 +11,16 @@ import {
   serializeRaffle,
   parseScheduledDrawColombia,
 } from "../lib/raffles";
+import { uploadRaffleImage } from "../lib/storageUpload";
 
 const router = Router();
+
+const UploadImageBody = z.object({
+  imageBase64: z.string().min(50),
+  contentType: z
+    .string()
+    .regex(/^image\/(jpeg|jpg|png|webp|gif)$/i, "Tipo de imagen no válido"),
+});
 
 const CreateRaffleBody = z.object({
   title: z.string().min(3).max(120),
@@ -38,6 +46,40 @@ const BuyTicketsBody = z.object({
 
 const ControlBody = z.object({
   action: z.enum(["publish", "close", "draw", "cancel", "reopen"]),
+});
+
+router.post("/raffles/upload-image", requireAdmin, async (req: AuthedRequest, res) => {
+  const body = UploadImageBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  let b64 = body.data.imageBase64.trim();
+  const comma = b64.indexOf(",");
+  if (comma >= 0) b64 = b64.slice(comma + 1);
+
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(b64, "base64");
+  } catch {
+    res.status(400).json({ error: "Imagen base64 inválida" });
+    return;
+  }
+
+  try {
+    const url = await uploadRaffleImage(
+      buffer,
+      body.data.contentType.toLowerCase() === "image/jpg"
+        ? "image/jpeg"
+        : body.data.contentType.toLowerCase(),
+      req.userUid!,
+    );
+    res.status(201).json({ url });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Error al subir imagen";
+    res.status(500).json({ error: message });
+  }
 });
 
 router.get("/raffles", requireAuth, async (_req, res) => {

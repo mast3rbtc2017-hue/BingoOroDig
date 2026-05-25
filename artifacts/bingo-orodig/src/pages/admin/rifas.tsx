@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { apiJson } from "@/lib/api-fetch";
 import { formatCOP } from "@/lib/currency";
-import { uploadRafflePrizeImage } from "@/lib/storage";
+import { uploadRafflePrizeImage, localPreviewUrl } from "@/lib/storage";
 import { datetimeLocalToColombiaISO, formatRaffleDrawColombia } from "@/lib/raffleTime";
 import type { Raffle, RaffleStatus } from "@/lib/raffle-types";
 import { motion } from "framer-motion";
@@ -88,16 +88,23 @@ export default function AdminRifas() {
   const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const localUrl = localPreviewUrl(file);
+    setPreviewUrl(localUrl);
     setUploading(true);
+
     try {
       const url = await uploadRafflePrizeImage(file);
       setForm((f) => ({ ...f, imageUrl: url }));
       setPreviewUrl(url);
-      toast.success("Imagen subida");
+      toast.success("Imagen subida correctamente");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Error al subir");
+      setPreviewUrl(null);
+      setForm((f) => ({ ...f, imageUrl: "" }));
+      toast.error(err instanceof Error ? err.message : "Error al subir imagen");
     } finally {
       setUploading(false);
+      URL.revokeObjectURL(localUrl);
       if (fileRef.current) fileRef.current.value = "";
     }
   };
@@ -312,11 +319,18 @@ export default function AdminRifas() {
                 className="relative aspect-video rounded-2xl border-2 border-dashed border-white/20 hover:border-primary/50 overflow-hidden cursor-pointer flex flex-col items-center justify-center bg-black/40 transition-colors"
               >
                 {previewUrl || form.imageUrl ? (
-                  <img
-                    src={previewUrl || form.imageUrl}
-                    alt="Premio"
-                    className="w-full h-full object-cover"
-                  />
+                  <>
+                    <img
+                      src={previewUrl || form.imageUrl}
+                      alt="Premio"
+                      className="w-full h-full object-cover"
+                    />
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                      </div>
+                    )}
+                  </>
                 ) : uploading ? (
                   <Loader2 className="w-10 h-10 text-primary animate-spin" />
                 ) : (
