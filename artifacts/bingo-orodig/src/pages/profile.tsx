@@ -1,19 +1,15 @@
-import { useState } from "react";
+import { Link } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Navbar } from "@/components/layout/Navbar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { useListMyTransactions, useListMyCards } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { User, Wallet, History, CreditCard, Plus, Bell } from "lucide-react";
+import { User, Wallet, History, CreditCard, Bell, ChevronRight } from "lucide-react";
 import { useNotifications } from "@/lib/useNotifications";
 import { apiJson } from "@/lib/api-fetch";
 import { formatCOP, formatCOPSigned } from "@/lib/currency";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-
-const DEPOSIT_AMOUNTS = [10_000, 25_000, 50_000, 100_000, 200_000];
 
 const TX_TYPE_LABELS: Record<string, string> = {
   deposit: "Recarga",
@@ -23,8 +19,7 @@ const TX_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function Profile() {
-  const { user, refreshUser } = useAuth();
-  const [depositing, setDepositing] = useState<number | null>(null);
+  const { user } = useAuth();
 
   const { data: transactions, refetch: refetchTx } = useListMyTransactions({
     query: { enabled: !!user, queryKey: ["/api/transactions"] }
@@ -40,20 +35,6 @@ export default function Profile() {
 
   const roleLabel = user.role === "admin" ? "Administrador" : "Jugador";
   const wonCards = cards?.filter(c => c.isWinner) || [];
-
-  const handleDeposit = async (amount: number) => {
-    setDepositing(amount);
-    try {
-      await apiJson<{ newBalance: number }>("/api/transactions/deposit", "POST", { amount });
-      await refreshUser();
-      toast.success(`✅ ${formatCOPSigned(amount)} agregados a tu saldo`);
-      refetchTx();
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Error al recargar");
-    } finally {
-      setDepositing(null);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col text-foreground">
@@ -76,11 +57,17 @@ export default function Profile() {
               <p className="text-primary font-medium tracking-widest uppercase text-sm mb-4">{roleLabel}</p>
 
               <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                <div className="bg-black/40 px-4 py-2 rounded-xl border border-white/5 flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-accent" />
-                  <span className="text-white/60 text-sm">Saldo</span>
-                  <span className="font-bold text-white text-lg">{formatCOP(user.balance)}</span>
-                </div>
+                <Link href="/wallet">
+                  <button
+                    type="button"
+                    className="bg-black/40 px-4 py-2 rounded-xl border border-white/5 hover:border-primary/40 flex items-center gap-2 transition-colors"
+                  >
+                    <Wallet className="w-4 h-4 text-accent" />
+                    <span className="text-white/60 text-sm">Saldo</span>
+                    <span className="font-bold text-white text-lg">{formatCOP(user.balance)}</span>
+                    <ChevronRight className="w-4 h-4 text-white/30" />
+                  </button>
+                </Link>
                 <div className="bg-black/40 px-4 py-2 rounded-xl border border-white/5 flex items-center gap-2">
                   <History className="w-4 h-4 text-primary" />
                   <span className="text-white/60 text-sm">Victorias</span>
@@ -95,35 +82,23 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Recargar saldo */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-card/40 backdrop-blur rounded-3xl border border-white/10 p-6"
-          >
-            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-accent" /> Recargar Saldo
-            </h3>
-            <p className="text-white/50 text-sm mb-5">Recargas en pesos colombianos (COP). Elige un monto para seguir jugando.</p>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-              {DEPOSIT_AMOUNTS.map(amount => (
-                <button
-                  key={amount}
-                  onClick={() => handleDeposit(amount)}
-                  disabled={depositing !== null}
-                  className={`
-                    py-3 px-4 rounded-xl font-bold text-sm border transition-all
-                    ${depositing === amount
-                      ? "bg-primary text-black border-primary"
-                      : "bg-black/40 text-white border-white/10 hover:border-primary/60 hover:bg-primary/10 hover:text-primary"}
-                    disabled:opacity-50
-                  `}
-                >
-                  {depositing === amount ? "..." : formatCOPSigned(amount)}
-                </button>
-              ))}
-            </div>
-          </motion.div>
+          <Link href="/wallet">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-primary/15 to-accent/10 backdrop-blur rounded-3xl border border-primary/30 p-6 flex items-center justify-between gap-4 hover:border-primary/50 transition-colors cursor-pointer"
+            >
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-accent" /> Billetera
+                </h3>
+                <p className="text-white/50 text-sm mt-1">
+                  Depósitos, retiros y movimientos — {formatCOP(user.balance)}
+                </p>
+              </div>
+              <ChevronRight className="w-6 h-6 text-primary shrink-0" />
+            </motion.div>
+          </Link>
 
           {/* Notificaciones */}
           <motion.div

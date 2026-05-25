@@ -59,10 +59,16 @@ export function Navbar() {
                   </Button>
                 </Link>
               ))}
-              <div className="flex items-center gap-1 bg-black/40 border border-white/10 px-3 py-1.5 rounded-xl ml-2">
-                <Wallet className="w-3.5 h-3.5 text-accent" />
-                <span className="text-accent font-bold text-sm">{formatCOP(user.balance ?? 0)}</span>
-              </div>
+              <Link href="/wallet">
+                <button
+                  type="button"
+                  title="Abrir billetera"
+                  className="flex items-center gap-1.5 bg-black/40 border border-white/10 hover:border-primary/40 hover:bg-primary/5 px-3 py-1.5 rounded-xl ml-2 transition-all cursor-pointer"
+                >
+                  <Wallet className="w-3.5 h-3.5 text-accent" />
+                  <span className="text-accent font-bold text-sm">{formatCOP(user.balance ?? 0)}</span>
+                </button>
+              </Link>
               <Button variant="ghost" size="sm" onClick={() => logout()} className="text-white/40 hover:text-white ml-1">
                 <LogOut className="w-4 h-4" />
               </Button>
@@ -82,10 +88,16 @@ export function Navbar() {
         {/* Mobile: balance + hamburger */}
         <div className="flex md:hidden items-center gap-2" data-navbar>
           {user && (
-            <div className="flex items-center gap-1 bg-black/40 border border-white/10 px-2.5 py-1 rounded-lg">
-              <Wallet className="w-3 h-3 text-accent" />
-              <span className="text-accent font-bold text-xs">{formatCOP(user.balance ?? 0)}</span>
-            </div>
+            <Link href="/wallet">
+              <button
+                type="button"
+                title="Billetera"
+                className="flex items-center gap-1 bg-black/40 border border-white/10 hover:border-primary/40 px-2.5 py-1 rounded-lg transition-colors"
+              >
+                <Wallet className="w-3 h-3 text-accent" />
+                <span className="text-accent font-bold text-xs">{formatCOP(user.balance ?? 0)}</span>
+              </button>
+            </Link>
           )}
           <button
             onClick={() => setMenuOpen(v => !v)}
@@ -107,6 +119,16 @@ export function Navbar() {
             className="md:hidden border-t border-white/10 bg-background/95 backdrop-blur-xl px-4 py-4 space-y-1"
             data-navbar
           >
+            {user && (
+              <Link href="/wallet">
+                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mb-1
+                  ${location === "/wallet" ? "bg-primary/15 text-primary" : "text-white/70 hover:text-white hover:bg-white/5"}`}>
+                  <Wallet className="w-5 h-5" />
+                  <span className="font-medium">Billetera</span>
+                  <span className="ml-auto text-accent font-bold text-sm">{formatCOP(user.balance ?? 0)}</span>
+                </div>
+              </Link>
+            )}
             {navLinks.map(l => (
               <Link key={l.href} href={l.href}>
                 <div className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors

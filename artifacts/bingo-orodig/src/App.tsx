@@ -12,6 +12,7 @@ import Register from "./pages/register";
 import Lobby from "./pages/lobby";
 import SorteoPage from "./pages/room";
 import Profile from "./pages/profile";
+import WalletPage from "./pages/wallet";
 import Leaderboard from "./pages/leaderboard";
 import AdminDashboard from "./pages/admin/dashboard";
 import AdminUsers from "./pages/admin/users";
@@ -70,6 +71,7 @@ function Router() {
       <Route path="/sorteo/:id"><ProtectedRoute component={SorteoPage} /></Route>
       <Route path="/room/:id"><RedirectRoomToSorteo /></Route>
       <Route path="/profile"><ProtectedRoute component={Profile} /></Route>
+      <Route path="/wallet"><ProtectedRoute component={WalletPage} /></Route>
       <Route path="/roulette"><ProtectedRoute component={Roulette} /></Route>
       
       <Route path="/admin"><ProtectedRoute component={AdminDashboard} adminOnly /></Route>

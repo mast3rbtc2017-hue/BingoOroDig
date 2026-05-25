@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "wouter";
 import { Navbar } from "@/components/layout/Navbar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { RouletteWheel } from "@/components/roulette/RouletteWheel";
@@ -170,13 +171,18 @@ export default function RoulettePage() {
               Apuesta a números del 0 al 36. Pago directo ×{config?.payoutMultiplier ?? 35} sobre tu apuesta.
             </p>
           </div>
-          <div className="flex items-center gap-2 bg-black/50 border border-white/10 rounded-2xl px-4 py-3">
-            <Wallet className="w-5 h-5 text-accent" />
-            <div>
-              <p className="text-white/40 text-xs">Tu saldo</p>
-              <p className="text-accent font-bold text-xl">{formatCOP(user.balance ?? 0)}</p>
-            </div>
-          </div>
+          <Link href="/wallet">
+            <button
+              type="button"
+              className="flex items-center gap-2 bg-black/50 border border-white/10 hover:border-primary/40 rounded-2xl px-4 py-3 transition-colors"
+            >
+              <Wallet className="w-5 h-5 text-accent" />
+              <div className="text-left">
+                <p className="text-white/40 text-xs">Tu saldo · Billetera</p>
+                <p className="text-accent font-bold text-xl">{formatCOP(user.balance ?? 0)}</p>
+              </div>
+            </button>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 xl:gap-10">

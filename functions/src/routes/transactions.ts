@@ -67,4 +67,46 @@ router.post("/transactions/deposit", requireAuth, async (req: AuthedRequest, res
   });
 });
 
+router.post("/transactions/withdraw", requireAuth, async (req: AuthedRequest, res) => {
+  const amount = Number(req.body?.amount);
+  if (!amount || amount < 1000 || amount > 5_000_000) {
+    res.status(400).json({ error: "Monto inválido (mín. $1.000 — máx. $5.000.000 COP)" });
+    return;
+  }
+
+  const userRef = db.collection("users").doc(req.userUid!);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) {
+    res.status(404).json({ error: "Usuario no encontrado" });
+    return;
+  }
+  const user = userSnap.data()!;
+  const balance = Number(user.balance) || 0;
+  if (amount > balance) {
+    res.status(400).json({ error: "Saldo insuficiente" });
+    return;
+  }
+
+  const newBalance = balance - amount;
+  await userRef.update({ balance: newBalance });
+
+  const txRef = await userRef.collection("transactions").add({
+    userId: user.id,
+    type: "withdrawal",
+    amount,
+    description: `Retiro de saldo — ${formatCOP(amount)}`,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  res.status(201).json({
+    id: txRef.id,
+    userId: user.id,
+    type: "withdrawal",
+    amount,
+    description: `Retiro de saldo — ${formatCOP(amount)}`,
+    newBalance,
+    createdAt: new Date().toISOString(),
+  });
+});
+
 export default router;
