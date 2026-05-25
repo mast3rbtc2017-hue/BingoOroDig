@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { ArrowLeft, CircleDot, Save, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { COLOR_BG } from "@/lib/roulette-constants";
+import { formatCOP, formatCOPSigned } from "@/lib/currency";
 
 type AdminConfig = {
   enabled: boolean;
@@ -43,8 +44,8 @@ export default function AdminRoulette() {
   const [form, setForm] = useState({
     enabled: true,
     winEveryNRouletteSpins: 10,
-    minBet: 1,
-    maxBet: 500,
+    minBet: 1000,
+    maxBet: 500000,
     maxBetsPerSpin: 8,
     payoutMultiplier: 35,
   });
@@ -249,12 +250,12 @@ export default function AdminRoulette() {
                   <p className="text-white font-medium truncate">{s.username}</p>
                   <p className="text-white/40 text-xs">
                     {s.winAllowed ? "Premio permitido" : "Casa (sin apuesta)"} · $
-                    {s.totalBet} → {s.totalPayout > 0 ? `+$${s.totalPayout}` : "0"}
+                    {formatCOP(s.totalBet)} → {s.totalPayout > 0 ? formatCOP(s.totalPayout) : formatCOP(0)}
                   </p>
                 </div>
               </div>
               <span className={s.netResult >= 0 ? "text-emerald-400" : "text-white/40"}>
-                {s.netResult >= 0 ? "+" : ""}${s.netResult}
+                {formatCOPSigned(s.netResult)}
               </span>
             </div>
           ))}

@@ -61,6 +61,7 @@ export default function Register() {
             <div className="text-center mb-8">
               <h1 className="text-3xl font-serif font-bold text-white mb-2">Crear Cuenta</h1>
               <p className="text-white/60">Únete a las salas de bingo más exclusivas</p>
+              <p className="text-primary/80 text-sm mt-2">Saldo y premios en pesos colombianos (COP)</p>
             </div>
 
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

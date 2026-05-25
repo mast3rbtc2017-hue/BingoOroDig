@@ -1,5 +1,6 @@
 import { db, FieldValue, nextId, Timestamp } from "./firestore";
 import { notifyUser } from "./notifications";
+import { formatCOP } from "./currency";
 import { validatePattern, type Pattern } from "./bingo";
 import { getGame, stopAutoTimer } from "./autoDraw";
 import type { AuthedRequest } from "./auth";
@@ -178,7 +179,7 @@ export async function approveBingoClaim(
     await notifyUser(String(claim.userUid), {
       type: "bingo_approved",
       title: "¡BINGO confirmado!",
-      message: `Tu premio de $${game.prize} fue acreditado. Patrón: ${claim.pattern}`,
+      message: `Tu premio de ${formatCOP(game.prize as number)} fue acreditado. Patrón: ${claim.pattern}`,
       gameId,
       roomId: claim.roomId as number,
       amount: game.prize as number,
@@ -187,7 +188,7 @@ export async function approveBingoClaim(
 
   await postSystemMessage(
     claim.roomId as number,
-    `🎉 ¡BINGO confirmado! ${claim.username} ganó $${game.prize}`,
+    `🎉 ¡BINGO confirmado! ${claim.username} ganó ${formatCOP(game.prize as number)}`,
   );
 
   return { ok: true, prize: game.prize as number };

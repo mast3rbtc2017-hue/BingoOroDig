@@ -13,6 +13,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiJson } from "@/lib/api-fetch";
+import { formatCOP } from "@/lib/currency";
 
 const PATTERN_OPTIONS = [
   { value: "line", label: "Línea" }, { value: "diagonal", label: "Diagonal" },
@@ -66,7 +67,7 @@ function SorteoFormPanel({ form, setForm, rooms, onSubmit, saving, isEdit }: {
           <select className="w-full h-10 rounded-md bg-black/40 border border-white/10 text-white px-3"
             value={form.roomId} onChange={e => setForm(f => ({ ...f, roomId: e.target.value }))} required disabled={isEdit}>
             <option value="">Seleccionar sala...</option>
-            {rooms?.map((r: any) => <option key={r.id} value={r.id}>{r.name} (${r.prize})</option>)}
+            {rooms?.map((r: any) => <option key={r.id} value={r.id}>{r.name} ({formatCOP(r.prize)})</option>)}
           </select>
         </div>
         <div className="space-y-1">
@@ -77,7 +78,7 @@ function SorteoFormPanel({ form, setForm, rooms, onSubmit, saving, isEdit }: {
           </select>
         </div>
         <div className="space-y-1">
-          <Label className="text-white/70">Premio ($)</Label>
+          <Label className="text-white/70">Premio (COP)</Label>
           <Input type="number" className="bg-black/40 border-white/10 text-white" value={form.prize}
             onChange={e => setForm(f => ({ ...f, prize: e.target.value }))} min={1} />
         </div>
@@ -115,7 +116,7 @@ function SorteoFormPanel({ form, setForm, rooms, onSubmit, saving, isEdit }: {
 
 const blankForm: FormState = {
   title: "", description: "", roomId: "", mode: "live", patternType: "line",
-  prize: "500", ballInterval: "8", scheduledAt: "",
+  prize: "50000", ballInterval: "8", scheduledAt: "",
 };
 
 export default function AdminSorteos({ autoCreate = false }: { autoCreate?: boolean }) {
@@ -274,7 +275,7 @@ export default function AdminSorteos({ autoCreate = false }: { autoCreate?: bool
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-white/50">
                       <span>Sala #{game.roomId}</span>
-                      <span className="text-accent font-bold">Premio: ${game.prize}</span>
+                      <span className="text-accent font-bold">Premio: {formatCOP(game.prize)}</span>
                       <span>Patrón: {PATTERN_OPTIONS.find(p => p.value === game.patternType)?.label || game.patternType}</span>
                       {game.scheduledAt && (
                         <span className="text-yellow-400 flex items-center gap-1">

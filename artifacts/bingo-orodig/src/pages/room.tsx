@@ -16,6 +16,7 @@ import { apiJson } from "@/lib/api-fetch";
 import { sounds, resumeAudio } from "@/lib/sounds";
 import { useCountdown, formatScheduledLocal } from "@/lib/countdown";
 import { useScheduleTicker } from "@/lib/useScheduleTicker";
+import { formatCOP, formatCOPSigned } from "@/lib/currency";
 
 const PATTERN_LABELS: Record<string, string> = {
   line: "Línea", diagonal: "Diagonal", corners: "Esquinas", x: "X", fullCard: "Cartón lleno"
@@ -165,7 +166,7 @@ export default function Room() {
         sounds.win();
         toast.success(data.message, { duration: 6000 });
       } else {
-        setBingoFlash(`¡GANASTE! 🏆\n+$${data.prize ?? 0}`);
+        setBingoFlash(`¡GANASTE! 🏆\n${formatCOPSigned(data.prize ?? 0)}`);
         sounds.win();
         triggerConfetti();
       }
@@ -234,9 +235,9 @@ export default function Room() {
                   <Badge className={`${STATUS_COLORS[gameStatus]} text-xs hidden sm:flex`}>{STATUS_LABELS[gameStatus]}</Badge>
                 </div>
                 <p className="text-xs md:text-sm text-white/50 mt-0.5 flex flex-wrap gap-x-2">
-                  <span>Premio: <span className="text-accent font-bold">${room?.prize}</span></span>
+                  <span>Premio: <span className="text-accent font-bold">{formatCOP(room?.prize ?? 0)}</span></span>
                   <span>Patrón: <span className="text-primary">{PATTERN_LABELS[room?.patternType || ""] || room?.patternType}</span></span>
-                  <span>Cartón: <span className="text-white/70">${room?.cardPrice}</span></span>
+                  <span>Cartón: <span className="text-white/70">{formatCOP(room?.cardPrice ?? 0)}</span></span>
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -270,7 +271,7 @@ export default function Room() {
                   <p className="text-white font-medium">Este sorteo ya finalizó</p>
                   <p className="text-white/50 text-xs">
                     {winner
-                      ? `Ganador: ${winner.username} — $${winner.prize}`
+                      ? `Ganador: ${winner.username} — ${formatCOP(winner.prize)}`
                       : "No puedes comprar cartones ni cantar BINGO. El admin puede eliminar el sorteo desde el panel."}
                   </p>
                 </div>
@@ -334,7 +335,7 @@ export default function Room() {
               </div>
               <Button onClick={handleBuyCard} disabled={!canBuyCard || buyCardMutation.isPending}
                 className="bg-gradient-to-r from-primary to-accent text-black font-bold text-sm h-9 px-4 hover:scale-105 transition-transform">
-                {buyCardMutation.isPending ? "..." : `+ Cartón ($${room?.cardPrice})`}
+                {buyCardMutation.isPending ? "..." : `+ Cartón (${formatCOP(room?.cardPrice ?? 0)})`}
               </Button>
             </div>
           </div>
@@ -460,7 +461,7 @@ export default function Room() {
               <p className="text-lg md:text-xl text-white mb-2">
                 <span className="font-bold text-accent">{winner.username}</span> ganó la partida
               </p>
-              <div className="text-3xl md:text-4xl font-bold text-white my-5 bg-black/40 py-4 rounded-xl border border-white/10">${winner.prize}</div>
+              <div className="text-3xl md:text-4xl font-bold text-white my-5 bg-black/40 py-4 rounded-xl border border-white/10">{formatCOP(winner.prize)}</div>
               <Button onClick={() => setWinnerDismissed(true)} className="w-full bg-gradient-to-r from-primary to-accent text-black font-bold">¡Genial!</Button>
             </motion.div>
           </motion.div>

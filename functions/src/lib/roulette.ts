@@ -1,5 +1,6 @@
 import { db, FieldValue, Timestamp } from "./firestore";
 import { nextId } from "./firestore";
+import { formatCOP } from "./currency";
 
 /** Orden físico de la ruleta europea (37 números) */
 export const WHEEL_ORDER = [
@@ -29,8 +30,8 @@ export type RouletteConfig = {
 const DEFAULT_CONFIG: RouletteConfig = {
   enabled: true,
   winEveryNRouletteSpins: 10,
-  minBet: 1,
-  maxBet: 500,
+  minBet: 1000,
+  maxBet: 500000,
   maxBetsPerSpin: 8,
   payoutMultiplier: 35,
   totalSpins: 0,
@@ -155,7 +156,7 @@ export async function executeRouletteSpin(
     }
     seen.add(b.number);
     if (b.amount < config.minBet || b.amount > config.maxBet) {
-      throw new Error(`Apuesta por número: $${config.minBet}–$${config.maxBet}`);
+      throw new Error(`Apuesta por número: ${formatCOP(config.minBet)}–${formatCOP(config.maxBet)}`);
     }
   }
 
@@ -214,7 +215,7 @@ export async function executeRouletteSpin(
     userId,
     type: "purchase",
     amount: totalBet,
-    description: `Ruleta — apuesta $${totalBet} (${bets.length} números)`,
+    description: `Ruleta — apuesta ${formatCOP(totalBet)} (${bets.length} números)`,
     createdAt: FieldValue.serverTimestamp(),
   });
 
@@ -223,7 +224,7 @@ export async function executeRouletteSpin(
       userId,
       type: "prize",
       amount: totalPayout,
-      description: `Ruleta — ganaste $${totalPayout} en el ${winningNumber}`,
+      description: `Ruleta — ganaste ${formatCOP(totalPayout)} en el ${winningNumber}`,
       createdAt: FieldValue.serverTimestamp(),
     });
   }

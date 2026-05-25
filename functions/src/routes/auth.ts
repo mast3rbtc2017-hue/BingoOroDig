@@ -56,7 +56,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
       displayName: displayName ?? username,
       avatarUrl: null,
       role: isFirstAdmin ? "admin" : "player",
-      balance: 500,
+      balance: 50_000,
       isBlocked: false,
       totalWins: 0,
       totalGamesPlayed: 0,
@@ -69,8 +69,8 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     await db.collection("users").doc(userRecord.uid).collection("transactions").add({
       userId: legacyId,
       type: "deposit",
-      amount: 500,
-      description: "Bono de bienvenida",
+      amount: 50_000,
+      description: "Bono de bienvenida (COP)",
       createdAt: FieldValue.serverTimestamp(),
     });
 
@@ -84,7 +84,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
         displayName: profile.displayName,
         avatarUrl: null,
         role: isFirstAdmin ? "admin" : "player",
-        balance: 500,
+        balance: 50_000,
         isBlocked: false,
         totalWins: 0,
         totalGamesPlayed: 0,

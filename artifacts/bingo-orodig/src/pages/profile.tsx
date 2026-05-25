@@ -8,11 +8,12 @@ import { es } from "date-fns/locale";
 import { User, Wallet, History, CreditCard, Plus, Bell } from "lucide-react";
 import { useNotifications } from "@/lib/useNotifications";
 import { apiJson } from "@/lib/api-fetch";
+import { formatCOP, formatCOPSigned } from "@/lib/currency";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-const DEPOSIT_AMOUNTS = [50, 100, 250, 500, 1000];
+const DEPOSIT_AMOUNTS = [10_000, 25_000, 50_000, 100_000, 200_000];
 
 const TX_TYPE_LABELS: Record<string, string> = {
   deposit: "Recarga",
@@ -46,7 +47,7 @@ export default function Profile() {
       const data = await apiJson<{ newBalance: number }>("/api/transactions/deposit", "POST", { amount });
       const token = localStorage.getItem("bingo_token");
       login(token!, { ...user, balance: data.newBalance });
-      toast.success(`✅ +$${amount} agregados a tu saldo`);
+      toast.success(`✅ ${formatCOPSigned(amount)} agregados a tu saldo`);
       refetchTx();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error al recargar");
@@ -79,7 +80,7 @@ export default function Profile() {
                 <div className="bg-black/40 px-4 py-2 rounded-xl border border-white/5 flex items-center gap-2">
                   <Wallet className="w-4 h-4 text-accent" />
                   <span className="text-white/60 text-sm">Saldo</span>
-                  <span className="font-bold text-white text-lg">${user.balance}</span>
+                  <span className="font-bold text-white text-lg">{formatCOP(user.balance)}</span>
                 </div>
                 <div className="bg-black/40 px-4 py-2 rounded-xl border border-white/5 flex items-center gap-2">
                   <History className="w-4 h-4 text-primary" />
@@ -104,7 +105,7 @@ export default function Profile() {
             <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
               <Plus className="w-5 h-5 text-accent" /> Recargar Saldo
             </h3>
-            <p className="text-white/50 text-sm mb-5">Elige un monto para agregar a tu cuenta y seguir jugando</p>
+            <p className="text-white/50 text-sm mb-5">Recargas en pesos colombianos (COP). Elige un monto para seguir jugando.</p>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
               {DEPOSIT_AMOUNTS.map(amount => (
                 <button
@@ -119,7 +120,7 @@ export default function Profile() {
                     disabled:opacity-50
                   `}
                 >
-                  {depositing === amount ? "..." : `+$${amount}`}
+                  {depositing === amount ? "..." : formatCOPSigned(amount)}
                 </button>
               ))}
             </div>
@@ -189,7 +190,7 @@ export default function Profile() {
                       <p className="text-xs text-white/40">{format(new Date(t.createdAt), "d MMM yyyy, HH:mm", { locale: es })}</p>
                     </div>
                     <div className={`font-bold text-sm ${t.type === "deposit" || t.type === "prize" ? "text-green-400" : "text-red-400"}`}>
-                      {t.type === "deposit" || t.type === "prize" ? "+" : "-"}${t.amount}
+                      {formatCOPSigned(t.type === "deposit" || t.type === "prize" ? t.amount : -t.amount)}
                     </div>
                   </div>
                 ))}

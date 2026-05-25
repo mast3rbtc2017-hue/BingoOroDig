@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { CircleDot, Trash2, Sparkles, History, Wallet } from "lucide-react";
 import { getMe } from "@workspace/api-client-react";
+import { formatCOP, formatCOPSigned } from "@/lib/currency";
 
 type RouletteConfig = {
   enabled: boolean;
@@ -48,12 +49,12 @@ const TABLE_LAYOUT: (number | null)[][] = [
   [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34],
 ];
 
-const CHIP_PRESETS = [1, 5, 10, 25, 50, 100];
+const CHIP_PRESETS = [1_000, 5_000, 10_000, 25_000, 50_000, 100_000];
 
 export default function RoulettePage() {
   const { user, login } = useAuth();
   const [config, setConfig] = useState<RouletteConfig | null>(null);
-  const [chip, setChip] = useState(10);
+  const [chip, setChip] = useState(10_000);
   const [bets, setBets] = useState<Bet[]>([]);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<SpinResult | null>(null);
@@ -149,7 +150,7 @@ export default function RoulettePage() {
     void loadHistory();
     if (result) {
       if (result.totalPayout > 0) {
-        toast.success(`¡Ganaste $${result.totalPayout.toLocaleString()}!`, {
+        toast.success(`¡Ganaste ${formatCOP(result.totalPayout)}!`, {
           description: `Número ${result.winningNumber}`,
         });
       } else {
@@ -182,7 +183,7 @@ export default function RoulettePage() {
             <Wallet className="w-5 h-5 text-accent" />
             <div>
               <p className="text-white/40 text-xs">Tu saldo</p>
-              <p className="text-accent font-bold text-xl">${user.balance?.toLocaleString() ?? 0}</p>
+              <p className="text-accent font-bold text-xl">{formatCOP(user.balance ?? 0)}</p>
             </div>
           </div>
         </div>
@@ -215,8 +216,8 @@ export default function RoulettePage() {
                     <Sparkles className="w-5 h-5" />
                     <span>
                       {result.totalPayout > 0
-                        ? `+$${result.netResult.toLocaleString()}`
-                        : `-$${Math.abs(result.netResult).toLocaleString()}`}
+                        ? formatCOPSigned(result.netResult)
+                        : formatCOPSigned(result.netResult)}
                     </span>
                   </div>
                 </motion.div>
@@ -241,7 +242,7 @@ export default function RoulettePage() {
                         : "border-white/20 bg-black/40 text-white hover:border-primary/50"
                     }`}
                   >
-                    ${c}
+                    <span className="text-[10px] leading-tight">{formatCOP(c)}</span>
                   </button>
                 ),
               )}
@@ -281,7 +282,7 @@ export default function RoulettePage() {
                           {num}
                           {betAmt != null && (
                             <span className="absolute -top-1 -right-1 bg-primary text-black text-[9px] font-bold px-1 rounded-full">
-                              ${betAmt}
+                              {formatCOP(betAmt)}
                             </span>
                           )}
                         </button>
@@ -319,11 +320,11 @@ export default function RoulettePage() {
                       >
                         {b.number}
                       </span>
-                      ${b.amount}
+                      {formatCOP(b.amount)}
                     </span>
                   ))}
                 </div>
-                <p className="text-accent font-bold mt-3 text-right">Total: ${totalBet.toLocaleString()}</p>
+                <p className="text-accent font-bold mt-3 text-right">Total: {formatCOP(totalBet)}</p>
               </div>
             )}
 
@@ -332,7 +333,7 @@ export default function RoulettePage() {
               disabled={spinning || !bets.length || !config?.enabled}
               className="w-full h-14 text-lg font-bold bg-gradient-to-r from-primary to-accent text-black hover:scale-[1.01] transition-transform shadow-[0_0_24px_rgba(212,175,55,0.35)] disabled:opacity-40"
             >
-              {spinning ? "Girando..." : `Girar · $${totalBet.toLocaleString() || "0"}`}
+              {spinning ? "Girando..." : `Girar · ${formatCOP(totalBet)}`}
             </Button>
           </section>
         </div>
@@ -360,7 +361,7 @@ export default function RoulettePage() {
                     {h.winningNumber}
                   </span>
                   <span className={h.netResult >= 0 ? "text-emerald-400" : "text-white/50"}>
-                    {h.netResult >= 0 ? "+" : ""}${h.netResult}
+                    {formatCOPSigned(h.netResult)}
                   </span>
                 </div>
               ))}

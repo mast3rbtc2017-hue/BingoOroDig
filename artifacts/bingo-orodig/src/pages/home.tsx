@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
+import { formatCOP } from "@/lib/currency";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Button } from "@/components/ui/button";
 import { resumeAudio } from "@/lib/sounds";
@@ -78,7 +79,7 @@ export default function Home() {
             <div className="grid grid-cols-3 gap-3 md:gap-8">
               {[
                 { label: "Jugadores", value: "2.400+", delay: 0 },
-                { label: "Premios Diarios", value: "$45K", delay: 0.15 },
+                { label: "Premios Diarios", value: formatCOP(45_000_000), delay: 0.15 },
                 { label: "Salas en Vivo", value: "12", delay: 0.3 }
               ].map((s, i) => (
                 <motion.div key={i}

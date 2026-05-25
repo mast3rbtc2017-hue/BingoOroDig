@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { apiJson } from "@/lib/api-fetch";
+import { formatCOP } from "@/lib/currency";
 import { Plus, Play } from "lucide-react";
 
 export default function AdminRooms() {
@@ -23,7 +24,7 @@ export default function AdminRooms() {
   const [creatingGameForRoom, setCreatingGameForRoom] = useState<number | null>(null);
   const [roomForm, setRoomForm] = useState({
     name: "", description: "", type: "classic" as any,
-    cardPrice: 10, maxPlayers: 100, ballInterval: 8, prize: 500, patternType: "line" as any,
+    cardPrice: 5000, maxPlayers: 100, ballInterval: 8, prize: 50_000, patternType: "line" as any,
   });
 
   const handleDelete = (id: number) => {
@@ -101,7 +102,7 @@ export default function AdminRooms() {
                       {room.currentGameId ? "Partida activa" : "Sin partida"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-accent font-bold">${room.prize}</TableCell>
+                  <TableCell className="text-accent font-bold">{formatCOP(room.prize)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button
@@ -174,12 +175,12 @@ export default function AdminRooms() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <Label>Precio cartón ($)</Label>
+                  <Label>Precio cartón (COP)</Label>
                   <Input type="number" className="bg-black/40 border-white/10 text-white" value={roomForm.cardPrice}
                     onChange={e => setRoomForm(f => ({...f, cardPrice: Number(e.target.value)}))} min={1} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Premio ($)</Label>
+                  <Label>Premio (COP)</Label>
                   <Input type="number" className="bg-black/40 border-white/10 text-white" value={roomForm.prize}
                     onChange={e => setRoomForm(f => ({...f, prize: Number(e.target.value)}))} min={1} />
                 </div>

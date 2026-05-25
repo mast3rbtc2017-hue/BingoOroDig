@@ -11,6 +11,7 @@ import { resumeAudio } from "@/lib/sounds";
 import { useCountdown, formatScheduledLocal } from "@/lib/countdown";
 import { useScheduleTicker } from "@/lib/useScheduleTicker";
 import { apiJson } from "@/lib/api-fetch";
+import { formatCOP } from "@/lib/currency";
 
 const TYPE_LABELS: Record<string, string> = {
   classic: "Clásico", fast: "Rápido", vip: "VIP", automatic: "Automático",
@@ -114,13 +115,13 @@ function SorteoCard({ item, index }: { item: LobbyItem; index: number }) {
             <span className="text-white/40 text-[10px] md:text-xs uppercase tracking-wider flex items-center gap-1 mb-1">
               <Coins className="w-3 h-3 text-accent" /> Premio
             </span>
-            <span className="text-lg md:text-xl font-bold text-accent">${prize.toLocaleString()}</span>
+            <span className="text-lg md:text-xl font-bold text-accent">{formatCOP(prize)}</span>
           </div>
           <div className="bg-black/40 rounded-xl p-2.5 md:p-3 border border-white/5">
             <span className="text-white/40 text-[10px] md:text-xs uppercase tracking-wider flex items-center gap-1 mb-1">
               <CreditCard className="w-3 h-3 text-primary" /> Cartón
             </span>
-            <span className="text-lg md:text-xl font-bold text-white">${room.cardPrice}</span>
+            <span className="text-lg md:text-xl font-bold text-white">{formatCOP(room.cardPrice)}</span>
           </div>
           <div className="bg-black/40 rounded-xl p-2.5 md:p-3 border border-white/5">
             <span className="text-white/40 text-[10px] md:text-xs uppercase tracking-wider flex items-center gap-1 mb-1">

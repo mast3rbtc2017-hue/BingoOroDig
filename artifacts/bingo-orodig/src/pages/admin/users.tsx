@@ -3,6 +3,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { formatCOP } from "@/lib/currency";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -73,7 +74,7 @@ export default function AdminUsers() {
                   <TableCell className="font-medium text-white">{u.id}</TableCell>
                   <TableCell className="text-white">{u.username}</TableCell>
                   <TableCell className="text-primary">{u.role === 'admin' ? 'Admin' : 'Jugador'}</TableCell>
-                  <TableCell className="text-accent font-bold">${u.balance}</TableCell>
+                  <TableCell className="text-accent font-bold">{formatCOP(u.balance)}</TableCell>
                   <TableCell>
                     {u.isBlocked ? (
                       <span className="text-red-400">Bloqueado</span>

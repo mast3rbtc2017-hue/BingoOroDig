@@ -1,5 +1,6 @@
 import { useGetLeaderboard } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
+import { formatCOP } from "@/lib/currency";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { motion } from "framer-motion";
 import { Trophy, Medal, Star } from "lucide-react";
@@ -76,7 +77,7 @@ export default function Leaderboard() {
                   <div className="text-right">
                     <p className="text-sm text-white/50 uppercase tracking-wider mb-1">Premio Total</p>
                     <p className={`text-2xl font-black ${i === 0 ? 'text-accent' : 'text-white'}`}>
-                      ${entry.totalPrize.toLocaleString()}
+                      {formatCOP(entry.totalPrize)}
                     </p>
                   </div>
                 </motion.div>

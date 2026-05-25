@@ -7,6 +7,7 @@ import { Users, Presentation, Gamepad2, Coins, Plus, Radio, Clock, Trophy, Arrow
 import { motion } from "framer-motion";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
+import { formatCOP } from "@/lib/currency";
 
 const STATUS_COLORS: Record<string, string> = {
   waiting: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
@@ -55,7 +56,7 @@ export default function AdminDashboard() {
             { label: "Usuarios", value: stats?.totalUsers ?? "—", icon: Users, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
             { label: "Partidas activas", value: stats?.activeGames ?? "—", icon: Radio, color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
             { label: "Salas", value: stats?.totalRooms ?? "—", icon: Presentation, color: "text-primary", bg: "bg-primary/10 border-primary/20" },
-            { label: "Ingresos", value: `$${stats?.totalRevenue ?? 0}`, icon: Coins, color: "text-accent", bg: "bg-accent/10 border-accent/20" },
+            { label: "Ingresos", value: formatCOP(stats?.totalRevenue ?? 0), icon: Coins, color: "text-accent", bg: "bg-accent/10 border-accent/20" },
           ].map((s, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
               className={`${s.bg} border rounded-2xl p-5 backdrop-blur`}>
@@ -99,7 +100,7 @@ export default function AdminDashboard() {
                     <Badge className={STATUS_COLORS[game.status]}>{STATUS_LABELS[game.status]}</Badge>
                   </div>
                   <p className="text-sm text-white/50">
-                    Sala #{game.roomId} • Premio: <span className="text-accent font-bold">${game.prize}</span> • {MODE_LABELS[game.mode] || "Manual"}
+                    Sala #{game.roomId} • Premio: <span className="text-accent font-bold">{formatCOP(game.prize)}</span> • {MODE_LABELS[game.mode] || "Manual"}
                     {game.scheduledAt && <> • <span className="text-yellow-400"><Calendar className="w-3 h-3 inline mr-1" />{format(new Date(game.scheduledAt), "d MMM HH:mm", { locale: es })}</span></>}
                   </p>
                 </div>
@@ -148,7 +149,7 @@ export default function AdminDashboard() {
                   <div key={room.id} className="bg-card/30 border border-white/5 rounded-xl p-3 flex justify-between items-center">
                     <div>
                       <p className="text-white font-medium text-sm">{room.name}</p>
-                      <p className="text-white/40 text-xs capitalize">{room.type} • ${room.prize}</p>
+                      <p className="text-white/40 text-xs capitalize">{room.type} • {formatCOP(room.prize)}</p>
                     </div>
                     <Badge className={room.currentGameId ? "bg-green-500/20 text-green-400 border-green-500/20" : "bg-white/5 text-white/30 border-white/10"}>
                       {room.currentGameId ? "Con partida" : "Libre"}

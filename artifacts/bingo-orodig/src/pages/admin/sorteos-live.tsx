@@ -11,6 +11,7 @@ import confetti from "canvas-confetti";
 import { ArrowLeft, Users, Radio, Pause, Play, Square, RotateCcw, Send, Grid3x3, MessageCircle, Trophy, X, Check, Bell } from "lucide-react";
 import { sounds, resumeAudio } from "@/lib/sounds";
 import { apiJson } from "@/lib/api-fetch";
+import { formatCOP } from "@/lib/currency";
 
 const BINGO_COLS = [
   { letter: "B", nums: [1, 16] },
@@ -168,7 +169,7 @@ export default function AdminSorteosLive() {
     triggerConfetti();
     sounds.win();
     const w = liveWinner as { username?: string; prize?: number };
-    toast.success(`🎉 ¡BINGO! ${w.username ?? "Jugador"} ganó $${w.prize ?? 0}`);
+    toast.success(`🎉 ¡BINGO! ${w.username ?? "Jugador"} ganó ${formatCOP(w.prize ?? 0)}`);
   }, [liveWinner, refetchWinners]);
 
   useEffect(() => {
@@ -386,7 +387,7 @@ export default function AdminSorteosLive() {
                   <span className="font-bold text-white text-sm">{w.username}</span>
                   <span className="text-white/40 text-xs ml-2">{PATTERN_LABELS[w.pattern] || w.pattern}</span>
                 </div>
-                <span className="font-bold text-accent">${w.prize}</span>
+                <span className="font-bold text-accent">{formatCOP(w.prize)}</span>
               </div>
             ))}
           </div>
@@ -474,7 +475,7 @@ export default function AdminSorteosLive() {
               <Badge className={`${STATUS_COLORS[status]} text-xs`}>{status === "waiting" ? "En espera" : status === "playing" ? "En Vivo" : status === "paused" ? "Pausado" : "Finalizado"}</Badge>
               {isPlaying && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />}
             </div>
-            <p className="text-white/30 text-xs hidden md:block">Sala #{game.roomId} · Premio: <span className="text-accent">${game.prize}</span> · {PATTERN_LABELS[game.patternType]}</p>
+            <p className="text-white/30 text-xs hidden md:block">Sala #{game.roomId} · Premio: <span className="text-accent">{formatCOP(game.prize)}</span> · {PATTERN_LABELS[game.patternType]}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">

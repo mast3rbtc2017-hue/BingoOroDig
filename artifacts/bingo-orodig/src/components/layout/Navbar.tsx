@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import logoUrl from "@assets/image_1779437502396.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { formatCOP } from "@/lib/currency";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Home, Users, Trophy, User, Shield, LogOut, Wallet, Gamepad2, CircleDot } from "lucide-react";
 
@@ -60,7 +61,7 @@ export function Navbar() {
               ))}
               <div className="flex items-center gap-1 bg-black/40 border border-white/10 px-3 py-1.5 rounded-xl ml-2">
                 <Wallet className="w-3.5 h-3.5 text-accent" />
-                <span className="text-accent font-bold text-sm">${user.balance?.toLocaleString() ?? 0}</span>
+                <span className="text-accent font-bold text-sm">{formatCOP(user.balance ?? 0)}</span>
               </div>
               <Button variant="ghost" size="sm" onClick={() => logout()} className="text-white/40 hover:text-white ml-1">
                 <LogOut className="w-4 h-4" />
@@ -83,7 +84,7 @@ export function Navbar() {
           {user && (
             <div className="flex items-center gap-1 bg-black/40 border border-white/10 px-2.5 py-1 rounded-lg">
               <Wallet className="w-3 h-3 text-accent" />
-              <span className="text-accent font-bold text-xs">${user.balance?.toLocaleString() ?? 0}</span>
+              <span className="text-accent font-bold text-xs">{formatCOP(user.balance ?? 0)}</span>
             </div>
           )}
           <button

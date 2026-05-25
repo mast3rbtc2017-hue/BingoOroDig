@@ -1,5 +1,6 @@
 import { useListGames, useControlGame, useDrawNumber, useGetDrawnNumbers } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
+import { formatCOP } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -102,7 +103,7 @@ function GameControlPanel({ game, onUpdate }: { game: any, onUpdate: () => void 
           </div>
           <p className="text-white/60 text-sm">
             Sala #{game.roomId} • Patrón: <span className="text-primary">{game.patternType}</span> •
-            Premio: <span className="text-accent font-bold">${game.prize}</span>
+            Premio: <span className="text-accent font-bold">{formatCOP(game.prize)}</span>
           </p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
