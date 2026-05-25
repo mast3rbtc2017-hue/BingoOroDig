@@ -12,7 +12,8 @@
     "dev": "npm run build && node lib/server.js",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions,firestore,hosting",
-    "deploy": "firebase deploy --only functions"
+    "deploy": "firebase deploy --only functions",
+    "test:raffle-image": "npm run build && node lib/test/raffleImage.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

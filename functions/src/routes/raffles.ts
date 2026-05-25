@@ -11,7 +11,10 @@ import {
   serializeRaffle,
   parseScheduledDrawColombia,
 } from "../lib/raffles";
-import { uploadRaffleImage } from "../lib/storageUpload";
+import {
+  buildDataUrlFromPayload,
+  validateRaffleImageUrl,
+} from "../lib/raffleImage";
 
 const router = Router();
 
@@ -28,11 +31,14 @@ const CreateRaffleBody = z.object({
   prizeTitle: z.string().min(2).max(120),
   prizeDescription: z.string().max(2000).optional(),
   imageUrl: z
-    .string()
-    .url()
+    .union([
+      z.string().url(),
+      z.string().regex(/^data:image\/(jpeg|jpg|png|webp|gif);base64,/i),
+      z.literal(""),
+      z.null(),
+    ])
     .optional()
-    .nullable()
-    .or(z.literal("").transform(() => null)),
+    .transform((v) => (v === "" ? null : v ?? null)),
   rules: z.string().max(3000).optional(),
   ticketPrice: z.number().min(1000).max(5_000_000),
   totalNumbers: z.number().int().min(10).max(500),
@@ -55,30 +61,15 @@ router.post("/raffles/upload-image", requireAdmin, async (req: AuthedRequest, re
     return;
   }
 
-  let b64 = body.data.imageBase64.trim();
-  const comma = b64.indexOf(",");
-  if (comma >= 0) b64 = b64.slice(comma + 1);
-
-  let buffer: Buffer;
   try {
-    buffer = Buffer.from(b64, "base64");
-  } catch {
-    res.status(400).json({ error: "Imagen base64 inválida" });
-    return;
-  }
-
-  try {
-    const url = await uploadRaffleImage(
-      buffer,
-      body.data.contentType.toLowerCase() === "image/jpg"
-        ? "image/jpeg"
-        : body.data.contentType.toLowerCase(),
-      req.userUid!,
+    const dataUrl = buildDataUrlFromPayload(
+      body.data.imageBase64,
+      body.data.contentType,
     );
-    res.status(201).json({ url });
+    res.status(201).json({ url: dataUrl });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Error al subir imagen";
-    res.status(500).json({ error: message });
+    const message = e instanceof Error ? e.message : "Error al procesar imagen";
+    res.status(400).json({ error: message });
   }
 });
 
@@ -140,6 +131,16 @@ router.post("/raffles", requireAdmin, async (req, res) => {
     scheduledTs = Timestamp.fromDate(d);
   }
 
+  let imageUrl: string | null = null;
+  try {
+    imageUrl = validateRaffleImageUrl(body.data.imageUrl ?? null);
+  } catch (e: unknown) {
+    res.status(400).json({
+      error: e instanceof Error ? e.message : "Imagen inválida",
+    });
+    return;
+  }
+
   const id = await nextId("raffles");
   const status = body.data.publish ? "open" : "draft";
 
@@ -149,7 +150,7 @@ router.post("/raffles", requireAdmin, async (req, res) => {
     description: body.data.description?.trim() ?? null,
     prizeTitle: body.data.prizeTitle.trim(),
     prizeDescription: body.data.prizeDescription?.trim() ?? null,
-    imageUrl: body.data.imageUrl ?? null,
+    imageUrl,
     rules: body.data.rules?.trim() ?? null,
     ticketPrice: body.data.ticketPrice,
     totalNumbers: body.data.totalNumbers,
@@ -196,7 +197,21 @@ router.patch("/raffles/:id", requireAdmin, async (req, res) => {
     "totalNumbers",
   ] as const;
   for (const key of allowed) {
-    if (req.body[key] !== undefined) updates[key] = req.body[key];
+    if (req.body[key] === undefined) continue;
+    if (key === "imageUrl") {
+      try {
+        updates.imageUrl = validateRaffleImageUrl(
+          req.body.imageUrl as string | null,
+        );
+      } catch (e: unknown) {
+        res.status(400).json({
+          error: e instanceof Error ? e.message : "Imagen inválida",
+        });
+        return;
+      }
+    } else {
+      updates[key] = req.body[key];
+    }
   }
   if (req.body.scheduledDrawAt !== undefined) {
     if (!req.body.scheduledDrawAt) {

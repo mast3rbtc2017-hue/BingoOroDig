@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { apiJson } from "@/lib/api-fetch";
 import { formatCOP } from "@/lib/currency";
-import { uploadRafflePrizeImage, localPreviewUrl } from "@/lib/storage";
+import { prepareRafflePrizeImage, localPreviewUrl } from "@/lib/raffleImage";
 import { datetimeLocalToColombiaISO, formatRaffleDrawColombia } from "@/lib/raffleTime";
 import type { Raffle, RaffleStatus } from "@/lib/raffle-types";
 import { motion } from "framer-motion";
@@ -94,10 +94,10 @@ export default function AdminRifas() {
     setUploading(true);
 
     try {
-      const url = await uploadRafflePrizeImage(file);
-      setForm((f) => ({ ...f, imageUrl: url }));
-      setPreviewUrl(url);
-      toast.success("Imagen subida correctamente");
+      const dataUrl = await prepareRafflePrizeImage(file);
+      setForm((f) => ({ ...f, imageUrl: dataUrl }));
+      setPreviewUrl(dataUrl);
+      toast.success("Imagen lista (guardada al crear la rifa)");
     } catch (err: unknown) {
       setPreviewUrl(null);
       setForm((f) => ({ ...f, imageUrl: "" }));
