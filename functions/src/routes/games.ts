@@ -21,7 +21,6 @@ import {
   rejectBingoClaim,
   serializeBingoClaim,
 } from "../lib/bingoClaims";
-import { recordBingoGameFinished } from "../lib/roulette";
 
 const router = Router();
 
@@ -30,6 +29,71 @@ router.get("/games", requireAuth, async (_req, res) => {
   const snap = await db.collection("games").orderBy("createdAt", "desc").get();
   res.json(snap.docs.map((d) => serializeGame({ id: Number(d.id), ...d.data() })));
 });
+
+/** Sorteos visibles en el lobby de jugadores (sala con partida activa o recién finalizada) */
+router.get("/games/lobby", requireAuth, async (_req, res) => {
+  await processScheduledGames();
+  const roomsSnap = await db.collection("rooms").get();
+  const items: Array<{
+    room: ReturnType<typeof serializeLobbyRoom>;
+    game: ReturnType<typeof serializeGame>;
+    winnerUsername: string | null;
+  }> = [];
+
+  for (const roomDoc of roomsSnap.docs) {
+    const roomRaw = { id: Number(roomDoc.id), ...roomDoc.data() } as Record<string, unknown> & {
+      id: number;
+      currentGameId?: number | null;
+    };
+    const gameId = roomRaw.currentGameId;
+    if (!gameId) continue;
+
+    const game = await getGame(gameId);
+    if (!game) continue;
+
+    let winnerUsername: string | null = null;
+    if (game.winnerId) {
+      const winner = await getUserByLegacyId(game.winnerId as number);
+      winnerUsername = winner?.username ?? null;
+    }
+
+    items.push({
+      room: serializeLobbyRoom(roomRaw),
+      game: serializeGame(game),
+      winnerUsername,
+    });
+  }
+
+  const order: Record<string, number> = {
+    playing: 0,
+    paused: 1,
+    waiting: 2,
+    finished: 3,
+  };
+  items.sort(
+    (a, b) =>
+      (order[a.game.status as string] ?? 9) - (order[b.game.status as string] ?? 9),
+  );
+
+  res.json(items);
+});
+
+function serializeLobbyRoom(r: Record<string, unknown>) {
+  return {
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    type: r.type,
+    status: r.status,
+    cardPrice: r.cardPrice,
+    maxPlayers: r.maxPlayers,
+    ballInterval: r.ballInterval,
+    prize: r.prize,
+    patternType: r.patternType,
+    playerCount: r.playerCount,
+    currentGameId: r.currentGameId ?? null,
+  };
+}
 
 router.post("/games/tick-schedule", requireAuth, async (_req, res) => {
   const started = await processScheduledGames();
@@ -56,7 +120,6 @@ router.post("/games", requireAdmin, async (req, res) => {
       .doc(String(room.currentGameId))
       .update({ status: "finished", finishedAt: FieldValue.serverTimestamp() });
     stopAutoTimer(room.currentGameId as number);
-    await recordBingoGameFinished();
   }
 
   const gameId = await nextId("games");
@@ -203,10 +266,8 @@ router.post("/games/:id/control", requireAdmin, async (req, res) => {
       stopAutoTimer(id);
       await db.collection("rooms").doc(String(game.roomId)).update({
         status: "active",
-        currentGameId: null,
         updatedAt: FieldValue.serverTimestamp(),
       });
-      await recordBingoGameFinished();
       break;
     case "restart": {
       const drawn = await db.collection("games").doc(String(id)).collection("drawnNumbers").get();

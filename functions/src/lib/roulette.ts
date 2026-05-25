@@ -17,26 +17,24 @@ export type RouletteBet = { number: number; amount: number };
 
 export type RouletteConfig = {
   enabled: boolean;
-  winEveryNBingoGames: number;
+  winEveryNRouletteSpins: number;
   minBet: number;
   maxBet: number;
   maxBetsPerSpin: number;
   payoutMultiplier: number;
-  bingoGamesFinished: number;
-  lastRouletteWinBingoCount: number;
   totalSpins: number;
+  lastWinAllowedAtSpin: number;
 };
 
 const DEFAULT_CONFIG: RouletteConfig = {
   enabled: true,
-  winEveryNBingoGames: 10,
+  winEveryNRouletteSpins: 10,
   minBet: 1,
   maxBet: 500,
   maxBetsPerSpin: 8,
   payoutMultiplier: 35,
-  bingoGamesFinished: 0,
-  lastRouletteWinBingoCount: 0,
   totalSpins: 0,
+  lastWinAllowedAtSpin: 0,
 };
 
 const CONFIG_REF = db.collection("settings").doc("roulette");
@@ -51,17 +49,21 @@ export function wheelIndexForNumber(n: number): number {
   return idx >= 0 ? idx : 0;
 }
 
+/** Migra campos antiguos (bingo) a contadores por giro de ruleta */
 export function serializeConfig(data: Record<string, unknown>): RouletteConfig {
+  const winEvery =
+    Number(data.winEveryNRouletteSpins ?? data.winEveryNBingoGames ?? 10) || 10;
   return {
     enabled: data.enabled !== false,
-    winEveryNBingoGames: Math.max(1, Number(data.winEveryNBingoGames ?? 10)),
+    winEveryNRouletteSpins: Math.max(1, winEvery),
     minBet: Math.max(1, Number(data.minBet ?? 1)),
     maxBet: Math.max(1, Number(data.maxBet ?? 500)),
     maxBetsPerSpin: Math.max(1, Math.min(37, Number(data.maxBetsPerSpin ?? 8))),
     payoutMultiplier: Math.max(1, Number(data.payoutMultiplier ?? 35)),
-    bingoGamesFinished: Number(data.bingoGamesFinished ?? 0),
-    lastRouletteWinBingoCount: Number(data.lastRouletteWinBingoCount ?? 0),
     totalSpins: Number(data.totalSpins ?? 0),
+    lastWinAllowedAtSpin: Number(
+      data.lastWinAllowedAtSpin ?? data.lastRouletteWinBingoCount ?? 0,
+    ),
   };
 }
 
@@ -75,35 +77,25 @@ export async function getRouletteConfig(): Promise<RouletteConfig> {
 }
 
 export async function updateRouletteConfig(
-  patch: Partial<RouletteConfig>,
+  patch: Partial<RouletteConfig> & Record<string, unknown>,
 ): Promise<RouletteConfig> {
-  await CONFIG_REF.set(
-    { ...patch, updatedAt: FieldValue.serverTimestamp() },
-    { merge: true },
-  );
+  const clean: Record<string, unknown> = { ...patch, updatedAt: FieldValue.serverTimestamp() };
+  delete clean.winEveryNBingoGames;
+  delete clean.bingoGamesFinished;
+  delete clean.lastRouletteWinBingoCount;
+  await CONFIG_REF.set(clean, { merge: true });
   return getRouletteConfig();
 }
 
-/** Llamar cuando termina una partida de bingo */
-export async function recordBingoGameFinished(): Promise<RouletteConfig> {
-  const snap = await CONFIG_REF.get();
-  const current = snap.exists ? serializeConfig(snap.data()!) : { ...DEFAULT_CONFIG };
-  const bingoGamesFinished = current.bingoGamesFinished + 1;
-  await CONFIG_REF.set(
-    { bingoGamesFinished, updatedAt: FieldValue.serverTimestamp() },
-    { merge: true },
-  );
-  return getRouletteConfig();
-}
-
+/** Cada N giros de ruleta se permite un resultado ganador (número apostado) */
 export function isWinAllowedSpin(config: RouletteConfig): boolean {
-  const since = config.bingoGamesFinished - config.lastRouletteWinBingoCount;
-  return since >= config.winEveryNBingoGames;
+  const since = config.totalSpins - config.lastWinAllowedAtSpin;
+  return since >= config.winEveryNRouletteSpins;
 }
 
-export function gamesUntilNextWin(config: RouletteConfig): number {
-  const since = config.bingoGamesFinished - config.lastRouletteWinBingoCount;
-  const rem = config.winEveryNBingoGames - since;
+export function spinsUntilNextWin(config: RouletteConfig): number {
+  const since = config.totalSpins - config.lastWinAllowedAtSpin;
+  const rem = config.winEveryNRouletteSpins - since;
   return Math.max(0, rem);
 }
 
@@ -138,7 +130,7 @@ export async function executeRouletteSpin(
   netResult: number;
   newBalance: number;
   winAllowed: boolean;
-  gamesUntilNextWin: number;
+  spinsUntilNextWin: number;
   spinId: number;
 }> {
   const config = await getRouletteConfig();
@@ -208,12 +200,13 @@ export async function executeRouletteSpin(
   await db.collection("rouletteSpins").doc(String(spinId)).set(spinRecord);
   await userRef.update({ balance: newBalance });
 
+  const newTotalSpins = config.totalSpins + 1;
   const configUpdate: Record<string, unknown> = {
-    totalSpins: config.totalSpins + 1,
+    totalSpins: newTotalSpins,
     updatedAt: FieldValue.serverTimestamp(),
   };
   if (winAllowed) {
-    configUpdate.lastRouletteWinBingoCount = config.bingoGamesFinished;
+    configUpdate.lastWinAllowedAtSpin = newTotalSpins;
   }
   await CONFIG_REF.set(configUpdate, { merge: true });
 
@@ -244,7 +237,7 @@ export async function executeRouletteSpin(
     netResult,
     newBalance,
     winAllowed,
-    gamesUntilNextWin: gamesUntilNextWin(updatedConfig),
+    spinsUntilNextWin: spinsUntilNextWin(updatedConfig),
     spinId,
   };
 }

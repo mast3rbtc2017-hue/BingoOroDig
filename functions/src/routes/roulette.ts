@@ -4,7 +4,7 @@ import { db, Timestamp } from "../lib/firestore";
 import { requireAuth, requireAdmin, type AuthedRequest } from "../lib/auth";
 import {
   executeRouletteSpin,
-  gamesUntilNextWin,
+  spinsUntilNextWin,
   getNumberColor,
   getRouletteConfig,
   isWinAllowedSpin,
@@ -25,7 +25,7 @@ const SpinBody = z.object({
 
 const ConfigBody = z.object({
   enabled: z.boolean().optional(),
-  winEveryNBingoGames: z.number().int().min(1).max(1000).optional(),
+  winEveryNRouletteSpins: z.number().int().min(1).max(1000).optional(),
   minBet: z.number().positive().optional(),
   maxBet: z.number().positive().optional(),
   maxBetsPerSpin: z.number().int().min(1).max(37).optional(),
@@ -37,7 +37,7 @@ router.get("/roulette/config", requireAuth, async (_req, res) => {
   res.json({
     ...config,
     winAllowedNow: isWinAllowedSpin(config),
-    gamesUntilNextWin: gamesUntilNextWin(config),
+    spinsUntilNextWin: spinsUntilNextWin(config),
   });
 });
 
@@ -51,7 +51,7 @@ router.patch("/roulette/config", requireAdmin, async (req, res) => {
   res.json({
     ...updated,
     winAllowedNow: isWinAllowedSpin(updated),
-    gamesUntilNextWin: gamesUntilNextWin(updated),
+    spinsUntilNextWin: spinsUntilNextWin(updated),
   });
 });
 

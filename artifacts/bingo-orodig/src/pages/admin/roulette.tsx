@@ -13,16 +13,15 @@ import { COLOR_BG } from "@/lib/roulette-constants";
 
 type AdminConfig = {
   enabled: boolean;
-  winEveryNBingoGames: number;
+  winEveryNRouletteSpins: number;
   minBet: number;
   maxBet: number;
   maxBetsPerSpin: number;
   payoutMultiplier: number;
-  bingoGamesFinished: number;
-  lastRouletteWinBingoCount: number;
   totalSpins: number;
+  lastWinAllowedAtSpin: number;
   winAllowedNow: boolean;
-  gamesUntilNextWin: number;
+  spinsUntilNextWin: number;
 };
 
 type AdminSpin = {
@@ -43,7 +42,7 @@ export default function AdminRoulette() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     enabled: true,
-    winEveryNBingoGames: 10,
+    winEveryNRouletteSpins: 10,
     minBet: 1,
     maxBet: 500,
     maxBetsPerSpin: 8,
@@ -55,7 +54,7 @@ export default function AdminRoulette() {
     setConfig(c);
     setForm({
       enabled: c.enabled,
-      winEveryNBingoGames: c.winEveryNBingoGames,
+      winEveryNRouletteSpins: c.winEveryNRouletteSpins,
       minBet: c.minBet,
       maxBet: c.maxBet,
       maxBetsPerSpin: c.maxBetsPerSpin,
@@ -97,7 +96,7 @@ export default function AdminRoulette() {
           <div>
             <h1 className="text-3xl font-serif font-bold text-white">Ruleta — Control</h1>
             <p className="text-white/50 text-sm">
-              Define cada cuántas partidas de bingo se permite un premio real en ruleta
+              Cada cuántos giros de ruleta se permite un premio real (el resto cae en números sin apuesta)
             </p>
           </div>
         </div>
@@ -105,14 +104,18 @@ export default function AdminRoulette() {
         {config && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
             {[
-              { label: "Bingos terminados", value: config.bingoGamesFinished },
-              { label: "Último premio (bingo #)", value: config.lastRouletteWinBingoCount },
+              { label: "Giros totales", value: config.totalSpins },
+              { label: "Último giro con premio", value: `#${config.lastWinAllowedAtSpin}` },
               {
                 label: "Próximo premio en",
-                value: `${config.gamesUntilNextWin} partidas`,
+                value: `${config.spinsUntilNextWin} giros`,
                 highlight: !config.winAllowedNow,
               },
-              { label: "Giros totales", value: config.totalSpins },
+              {
+                label: "Estado",
+                value: config.winAllowedNow ? "Premio permitido ahora" : "Casa (sin apuesta)",
+                highlight: config.winAllowedNow,
+              },
             ].map((s, i) => (
               <motion.div
                 key={i}
@@ -147,20 +150,20 @@ export default function AdminRoulette() {
           <div>
             <Label className="text-white flex items-center gap-2">
               <Shield className="w-4 h-4 text-primary" />
-              Permitir ganar 1 vez cada N partidas de bingo
+              Permitir ganar 1 vez cada N giros de ruleta
             </Label>
             <p className="text-white/40 text-xs mb-2">
-              Entre premios permitidos, la ruleta cae en números sin apuesta (la casa gana)
+              Ejemplo: 10 = en 9 giros seguidos la bola cae en un número que nadie apostó; en el giro 10 puede ganar un jugador.
             </p>
             <Input
               type="number"
               min={1}
               max={1000}
-              value={form.winEveryNBingoGames}
+              value={form.winEveryNRouletteSpins}
               onChange={(e) =>
                 setForm((f) => ({
                   ...f,
-                  winEveryNBingoGames: Math.max(1, Number(e.target.value) || 1),
+                  winEveryNRouletteSpins: Math.max(1, Number(e.target.value) || 1),
                 }))
               }
               className="bg-black/40 border-white/10"

@@ -9,6 +9,7 @@ import chatRouter from "./chat";
 import transactionsRouter from "./transactions";
 import statsRouter from "./stats";
 import rouletteRouter from "./roulette";
+import notificationsRouter from "./notifications";
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use(chatRouter);
 router.use(transactionsRouter);
 router.use(statsRouter);
 router.use(rouletteRouter);
+router.use(notificationsRouter);
 
 export default router;

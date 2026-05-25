@@ -1,5 +1,5 @@
 import { db, FieldValue, nextId, Timestamp } from "./firestore";
-import { recordBingoGameFinished } from "./roulette";
+import { notifyUser } from "./notifications";
 import { validatePattern, type Pattern } from "./bingo";
 import { getGame, stopAutoTimer } from "./autoDraw";
 import type { AuthedRequest } from "./auth";
@@ -142,11 +142,8 @@ export async function approveBingoClaim(
 
   await db.collection("rooms").doc(String(claim.roomId)).update({
     status: "active",
-    currentGameId: null,
     updatedAt: FieldValue.serverTimestamp(),
   });
-
-  await recordBingoGameFinished();
 
   const winnerId = await nextId("winners");
   const winner = {
@@ -177,6 +174,14 @@ export async function approveBingoClaim(
       amount: game.prize,
       description: `¡BINGO! Premio — patrón ${claim.pattern}`,
       createdAt: FieldValue.serverTimestamp(),
+    });
+    await notifyUser(String(claim.userUid), {
+      type: "bingo_approved",
+      title: "¡BINGO confirmado!",
+      message: `Tu premio de $${game.prize} fue acreditado. Patrón: ${claim.pattern}`,
+      gameId,
+      roomId: claim.roomId as number,
+      amount: game.prize as number,
     });
   }
 

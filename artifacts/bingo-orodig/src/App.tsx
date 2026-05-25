@@ -20,6 +20,7 @@ import AdminSorteos from "./pages/admin/sorteos";
 import AdminSorteosLive from "./pages/admin/sorteos-live";
 import Roulette from "./pages/roulette";
 import AdminRoulette from "./pages/admin/roulette";
+import { NotificationsListener } from "@/components/NotificationsListener";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,7 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <NotificationsListener />
             <Router />
           </WouterRouter>
           <Toaster />

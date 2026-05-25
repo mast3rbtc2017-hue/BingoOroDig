@@ -59,6 +59,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /users/{uid}/notifications/{notifId} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
     match /winners/{winnerId} {
       allow read: if signedIn();
       allow write: if false;

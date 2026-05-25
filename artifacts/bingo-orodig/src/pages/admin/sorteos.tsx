@@ -181,7 +181,7 @@ export default function AdminSorteos({ autoCreate = false }: { autoCreate?: bool
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("¿Eliminar este sorteo? Se borrarán todos sus datos.")) return;
+    if (!confirm("¿Eliminar este sorteo? Desaparecerá del lobby de jugadores y se borrarán sus datos.")) return;
     setDeletingId(id);
     try {
       await apiCall(`/api/games/${id}`, "DELETE");

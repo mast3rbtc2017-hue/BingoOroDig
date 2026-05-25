@@ -91,9 +91,12 @@ export default function AdminSorteosLive() {
   const PendingClaimsPanel = () => (
     pendingClaims.length > 0 ? (
       <div className="bg-gradient-to-r from-orange-500/15 to-red-500/10 border-2 border-orange-500/50 rounded-2xl p-4 animate-pulse">
-        <h3 className="font-bold text-orange-400 mb-3 flex items-center gap-2 text-sm">
+        <h3 className="font-bold text-orange-400 mb-1 flex items-center gap-2 text-sm">
           <Bell className="w-4 h-4" /> ¡BINGO pendiente de revisión! ({pendingClaims.length})
         </h3>
+        <p className="text-white/50 text-xs mb-3">
+          Confirma si el patrón es válido: el jugador recibe el premio en su saldo y una notificación. Rechazar reanuda el sorteo.
+        </p>
         <motion.div className="space-y-3">
           {pendingClaims.map((c) => (
             <div key={c.id} className="bg-black/50 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-3 border border-orange-500/30">

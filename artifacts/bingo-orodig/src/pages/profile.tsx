@@ -5,11 +5,12 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { useListMyTransactions, useListMyCards } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { User, Wallet, History, CreditCard, Plus } from "lucide-react";
+import { User, Wallet, History, CreditCard, Plus, Bell } from "lucide-react";
+import { useNotifications } from "@/lib/useNotifications";
+import { apiJson } from "@/lib/api-fetch";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { apiJson } from "@/lib/api-fetch";
 
 const DEPOSIT_AMOUNTS = [50, 100, 250, 500, 1000];
 
@@ -31,6 +32,8 @@ export default function Profile() {
   const { data: cards } = useListMyCards({
     query: { enabled: !!user, queryKey: ["/api/cards"] }
   });
+
+  const { data: notifications, refetch: refetchNotifs } = useNotifications();
 
   if (!user) return null;
 
@@ -120,6 +123,50 @@ export default function Profile() {
                 </button>
               ))}
             </div>
+          </motion.div>
+
+          {/* Notificaciones */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-card/40 backdrop-blur rounded-3xl border border-white/10 p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Bell className="w-5 h-5 text-primary" /> Notificaciones
+              </h3>
+              {(notifications?.filter((n) => !n.read).length ?? 0) > 0 && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await apiJson("/api/notifications/read-all", "POST");
+                    refetchNotifs();
+                  }}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Marcar todas leídas
+                </button>
+              )}
+            </div>
+            <div className="space-y-2">
+              {notifications?.slice(0, 8).map((n) => (
+                <div
+                  key={n.id}
+                  className={`p-3 rounded-xl border ${
+                    n.read ? "bg-black/30 border-white/5" : "bg-primary/10 border-primary/30"
+                  }`}
+                >
+                  <p className="font-medium text-white text-sm">{n.title}</p>
+                  <p className="text-white/50 text-xs mt-0.5">{n.message}</p>
+                </div>
+              ))}
+              {(!notifications || notifications.length === 0) && (
+                <p className="text-white/30 text-sm text-center py-4">Sin notificaciones aún</p>
+              )}
+            </div>
+            <p className="text-white/30 text-xs mt-3">
+              Cuando el admin confirma tu BINGO, recibes aviso aquí y un mensaje en pantalla.
+            </p>
           </motion.div>
 
           {/* Transactions + Cards */}

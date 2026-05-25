@@ -51,9 +51,9 @@ async function main() {
 
   const cfg = await req("/api/roulette/config", { token });
   console.log("✓ Config", {
-    winEveryNBingoGames: cfg.winEveryNBingoGames,
+    winEveryNRouletteSpins: cfg.winEveryNRouletteSpins,
     winAllowedNow: cfg.winAllowedNow,
-    gamesUntilNextWin: cfg.gamesUntilNextWin,
+    spinsUntilNextWin: cfg.spinsUntilNextWin,
     minBet: cfg.minBet,
   });
 

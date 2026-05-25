@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import { MessageCircle, X, ChevronUp, ChevronDown, Radio, Calendar, Timer } from "lucide-react";
+import { MessageCircle, X, ChevronUp, ChevronDown, Radio, Calendar, Timer, Trophy } from "lucide-react";
 import { apiJson } from "@/lib/api-fetch";
 import { sounds, resumeAudio } from "@/lib/sounds";
 import { useCountdown, formatScheduledLocal } from "@/lib/countdown";
@@ -193,7 +193,8 @@ export default function Room() {
   };
 
   const currentBall = allDrawn.length > 0 ? allDrawn[allDrawn.length - 1] : null;
-  const canBuyCard = !!room?.currentGameId && game?.status !== "finished" && game?.status !== "paused";
+  const isFinished = game?.status === "finished";
+  const canBuyCard = !!room?.currentGameId && !isFinished && game?.status !== "paused";
   const claimPattern = game?.patternType || room?.patternType || "line";
   const gameStatus = game?.status || room?.status || "active";
   const drawnPct = Math.round((allDrawn.length / 75) * 100);
@@ -258,6 +259,20 @@ export default function Room() {
                 <div className="text-center sm:text-right">
                   <p className="text-white/40 text-[10px] uppercase tracking-widest mb-0.5">Inicia en</p>
                   <p className="text-3xl md:text-4xl font-black text-yellow-400 tabular-nums">{countdown.label}</p>
+                </div>
+              </div>
+            )}
+
+            {isFinished && (
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-sm">
+                <Trophy className="w-5 h-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-white font-medium">Este sorteo ya finalizó</p>
+                  <p className="text-white/50 text-xs">
+                    {winner
+                      ? `Ganador: ${winner.username} — $${winner.prize}`
+                      : "No puedes comprar cartones ni cantar BINGO. El admin puede eliminar el sorteo desde el panel."}
+                  </p>
                 </div>
               </div>
             )}
