@@ -5,6 +5,8 @@
 const API = (process.env.API_URL || "https://bingoorodig-api.onrender.com").replace(/\/+$/, "");
 const USER = process.env.TEST_USER || "jugador1";
 const PASS = process.env.TEST_PASS || "BingoJugador2026!";
+const FIREBASE_API_KEY =
+  process.env.FIREBASE_API_KEY || "AIzaSyDTolx2K9rMTkBUq7S1CcRnBFZn1XphDdc";
 
 async function req(path, { method = "GET", token, body } = {}) {
   const res = await fetch(`${API}${path}`, {
@@ -25,7 +27,17 @@ async function login() {
     method: "POST",
     body: { username: USER, password: PASS },
   });
-  return data.token;
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${FIREBASE_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: data.token, returnSecureToken: true }),
+    },
+  );
+  const fb = await res.json();
+  if (!res.ok) throw new Error(fb.error?.message || "Firebase signIn failed");
+  return fb.idToken;
 }
 
 function assert(cond, msg) {

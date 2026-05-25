@@ -80,14 +80,26 @@ router.post("/roulette/spin", requireAuth, async (req: AuthedRequest, res) => {
 });
 
 router.get("/roulette/history", requireAuth, async (req: AuthedRequest, res) => {
-  const limit = Math.min(50, Number(req.query.limit) || 20);
-  const snap = await db
-    .collection("rouletteSpins")
-    .where("userUid", "==", req.userUid!)
-    .orderBy("createdAt", "desc")
-    .limit(limit)
-    .get();
-  res.json(snap.docs.map((d) => serializeSpin({ id: Number(d.id), ...d.data() })));
+  try {
+    const limit = Math.min(50, Number(req.query.limit) || 20);
+    const snap = await db
+      .collection("rouletteSpins")
+      .where("userUid", "==", req.userUid!)
+      .limit(80)
+      .get();
+    const rows = snap.docs
+      .map((d) => serializeSpin({ id: Number(d.id), ...d.data() }))
+      .sort((a, b) => {
+        const ta = a.createdAt ? new Date(a.createdAt as string).getTime() : 0;
+        const tb = b.createdAt ? new Date(b.createdAt as string).getTime() : 0;
+        return tb - ta;
+      })
+      .slice(0, limit);
+    res.json(rows);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error al cargar historial";
+    res.status(500).json({ error: message });
+  }
 });
 
 router.get("/roulette/admin/spins", requireAdmin, async (req, res) => {
