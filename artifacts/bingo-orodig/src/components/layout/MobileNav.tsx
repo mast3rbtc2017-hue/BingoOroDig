@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
-import { Gamepad2, Trophy, User, Shield, CircleDot } from "lucide-react";
+import { Gamepad2, Trophy, User, Shield, CircleDot, Ticket } from "lucide-react";
 
 export function MobileNav() {
   const { user } = useAuth();
@@ -14,6 +14,7 @@ export function MobileNav() {
   const tabs = [
     { href: "/lobby", label: "Lobby", icon: Gamepad2 },
     { href: "/roulette", label: "Ruleta", icon: CircleDot },
+    { href: "/rifas", label: "Rifas", icon: Ticket },
     { href: "/leaderboard", label: "Ranking", icon: Trophy },
     { href: "/profile", label: "Perfil", icon: User },
     ...(user.role === "admin" ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),

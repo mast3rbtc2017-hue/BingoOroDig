@@ -38,7 +38,7 @@ export function useNotifications() {
     for (const n of query.data) {
       if (seenRef.current.has(n.id) || n.read) continue;
       seenRef.current.add(n.id);
-      if (n.type === "bingo_approved") {
+      if (n.type === "bingo_approved" || n.type === "raffle_won") {
         toast.success(n.title, { description: n.message, duration: 10000 });
       }
     }

@@ -9,6 +9,7 @@ import transactionsRouter from "./transactions";
 import statsRouter from "./stats";
 import rouletteRouter from "./roulette";
 import notificationsRouter from "./notifications";
+import rafflesRouter from "./raffles";
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use(transactionsRouter);
 router.use(statsRouter);
 router.use(rouletteRouter);
 router.use(notificationsRouter);
+router.use(rafflesRouter);
 
 export default router;

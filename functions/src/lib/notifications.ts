@@ -1,7 +1,11 @@
 import { db, FieldValue, Timestamp } from "./firestore";
 import { nextId } from "./firestore";
 
-export type NotificationType = "bingo_approved" | "bingo_rejected" | "game_finished";
+export type NotificationType =
+  | "bingo_approved"
+  | "bingo_rejected"
+  | "game_finished"
+  | "raffle_won";
 
 export async function notifyUser(
   userUid: string,

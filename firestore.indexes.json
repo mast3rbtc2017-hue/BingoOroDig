@@ -23,6 +23,21 @@
         { "fieldPath": "roomId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "raffles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "soldNumbers",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "userUid", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -13,6 +13,9 @@ import Lobby from "./pages/lobby";
 import SorteoPage from "./pages/room";
 import Profile from "./pages/profile";
 import WalletPage from "./pages/wallet";
+import RifasPage from "./pages/rifas";
+import RifaDetailPage from "./pages/rifa";
+import AdminRifas from "./pages/admin/rifas";
 import Leaderboard from "./pages/leaderboard";
 import AdminDashboard from "./pages/admin/dashboard";
 import AdminUsers from "./pages/admin/users";
@@ -73,6 +76,8 @@ function Router() {
       <Route path="/profile"><ProtectedRoute component={Profile} /></Route>
       <Route path="/wallet"><ProtectedRoute component={WalletPage} /></Route>
       <Route path="/roulette"><ProtectedRoute component={Roulette} /></Route>
+      <Route path="/rifas"><ProtectedRoute component={RifasPage} /></Route>
+      <Route path="/rifas/:id"><ProtectedRoute component={RifaDetailPage} /></Route>
       
       <Route path="/admin"><ProtectedRoute component={AdminDashboard} adminOnly /></Route>
       <Route path="/admin/rooms"><ProtectedRoute component={() => <RedirectTo href="/admin/sorteos" />} adminOnly /></Route>
@@ -82,6 +87,7 @@ function Router() {
       <Route path="/admin/sorteos/:id/live"><ProtectedRoute component={AdminSorteosLive} adminOnly /></Route>
       <Route path="/admin/sorteos"><ProtectedRoute component={AdminSorteos} adminOnly /></Route>
       <Route path="/admin/roulette"><ProtectedRoute component={AdminRoulette} adminOnly /></Route>
+      <Route path="/admin/rifas"><ProtectedRoute component={AdminRifas} adminOnly /></Route>
       
       <Route component={NotFound} />
     </Switch>

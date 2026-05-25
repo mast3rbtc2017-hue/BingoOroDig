@@ -3,7 +3,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Presentation, Gamepad2, Coins, Plus, Radio, Clock, Trophy, ArrowRight, Calendar, CircleDot } from "lucide-react";
+import { Users, Presentation, Gamepad2, Coins, Plus, Radio, Clock, Trophy, ArrowRight, Calendar, CircleDot, Ticket } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -126,6 +126,7 @@ export default function AdminDashboard() {
                   { label: "Gestionar Sorteos", desc: "Ver, editar, borrar", href: "/admin/sorteos", icon: Gamepad2, color: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
                   { label: "Gestionar Usuarios", desc: "Cuentas y saldos", href: "/admin/users", icon: Users, color: "text-green-400 bg-green-500/10 border-green-500/20" },
                   { label: "Ruleta", desc: "Premios cada N bingos", href: "/admin/roulette", icon: CircleDot, color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+                  { label: "Rifas", desc: "Crear rifas con premio e imagen", href: "/admin/rifas", icon: Ticket, color: "text-violet-400 bg-violet-500/10 border-violet-500/20" },
                 ].map((a, i) => (
                   <Link key={i} href={a.href}>
                     <div className={`${a.color} border rounded-xl p-4 flex items-center gap-3 hover:scale-[1.02] transition-transform cursor-pointer`}>

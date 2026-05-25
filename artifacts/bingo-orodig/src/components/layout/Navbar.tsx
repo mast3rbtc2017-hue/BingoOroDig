@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { formatCOP } from "@/lib/currency";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Home, Users, Trophy, User, Shield, LogOut, Wallet, Gamepad2, CircleDot } from "lucide-react";
+import { Menu, X, Home, Users, Trophy, User, Shield, LogOut, Wallet, Gamepad2, CircleDot, Ticket } from "lucide-react";
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -28,6 +28,7 @@ export function Navbar() {
   const navLinks = user ? [
     { href: "/lobby", label: "Lobby", icon: Gamepad2 },
     { href: "/roulette", label: "Ruleta", icon: CircleDot },
+    { href: "/rifas", label: "Rifas", icon: Ticket },
     { href: "/profile", label: "Perfil", icon: User },
     { href: "/leaderboard", label: "Ranking", icon: Trophy },
     ...(user.role === "admin" ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
