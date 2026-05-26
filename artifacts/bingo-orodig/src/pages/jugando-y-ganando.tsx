@@ -1,59 +1,96 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+
+/** Archivo en `public/Juega.mp4` (se sirve como /Juega.mp4 en hosting) */
+const VIDEO_SRC = "/Juega.mp4";
 
 export default function JugandoGanandoSplash() {
   const [, setLocation] = useLocation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoError, setVideoError] = useState(false);
+  const [needsTap, setNeedsTap] = useState(false);
 
-  useEffect(() => {
+  const goToRifas = useCallback(() => setLocation("/rifas"), [setLocation]);
+
+  const tryPlay = useCallback(async () => {
     const v = videoRef.current;
     if (!v) return;
-    const playPromise = v.play();
-    if (playPromise) {
-      playPromise.catch(() => {
-        // Some browsers block autoplay unless muted/gesture.
-      });
+    try {
+      v.muted = true;
+      await v.play();
+      setNeedsTap(false);
+    } catch {
+      setNeedsTap(true);
     }
   }, []);
 
-  const goToRifas = () => setLocation("/rifas");
+  useEffect(() => {
+    void tryPlay();
+  }, [tryPlay]);
+
+  const handleLoaded = () => {
+    void tryPlay();
+  };
+
+  const handleTapToPlay = () => {
+    void tryPlay();
+  };
+
+  if (videoError) {
+    return (
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black p-6 text-center">
+        <p className="text-white/90 text-base max-w-md">
+          No se pudo cargar el video. Asegúrate de tener el archivo{" "}
+          <span className="text-primary font-mono text-sm">Juega.mp4</span> en la carpeta{" "}
+          <span className="text-white/60 text-xs">artifacts/bingo-orodig/public/</span>
+        </p>
+        <Button
+          type="button"
+          className="bg-gradient-to-r from-primary to-accent text-black font-bold"
+          onClick={goToRifas}
+        >
+          Ir a Jugando y Ganando
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-2xl overflow-hidden border border-white/10 bg-black/70">
+    <>
+      {/* Oculta cualquier control nativo residual en WebKit */}
+      <style>{`
+        .jugando-splash-root video::-webkit-media-controls { display: none !important; }
+        .jugando-splash-root video::-webkit-media-controls-enclosure { display: none !important; }
+      `}</style>
+
+      <div className="jugando-splash-root fixed inset-0 z-[100] bg-black">
         <video
           ref={videoRef}
-          className="w-full aspect-[9/16] bg-black"
-          src="/Juega.mp4"
+          className="absolute inset-0 h-full w-full object-cover bg-black"
+          src={VIDEO_SRC}
           autoPlay
           muted
           playsInline
-          controls
+          preload="auto"
+          disablePictureInPicture
+          disableRemotePlayback
+          onLoadedData={handleLoaded}
+          onCanPlay={handleLoaded}
           onEnded={goToRifas}
           onError={() => setVideoError(true)}
         />
-        <div className="p-4 space-y-3">
-          <p className="text-white/80 text-sm text-center">
-            {videoError
-              ? "No se encontró el video Juega.mp4."
-              : "Al terminar el video entrarás automáticamente."}
-          </p>
-          {videoError && (
-            <p className="text-white/50 text-xs text-center">
-              Coloca el archivo en `artifacts/bingo-orodig/public/Juega.mp4`
-            </p>
-          )}
-          <Button
+
+        {needsTap && (
+          <button
             type="button"
-            className="w-full bg-gradient-to-r from-primary to-accent text-black font-bold"
-            onClick={goToRifas}
+            className="absolute inset-0 z-[1] flex items-center justify-center bg-black/40 text-white/90 text-lg font-medium"
+            onClick={handleTapToPlay}
           >
-            Entrar ahora
-          </Button>
-        </div>
+            Toca la pantalla para reproducir
+          </button>
+        )}
       </div>
-    </div>
+    </>
   );
 }
