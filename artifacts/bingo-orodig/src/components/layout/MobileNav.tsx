@@ -14,7 +14,7 @@ export function MobileNav() {
   const tabs = [
     { href: "/lobby", label: "Lobby", icon: Gamepad2 },
     { href: "/roulette", label: "Ruleta", icon: CircleDot },
-    { href: "/rifas", label: "Jugando y Ganando", icon: Ticket },
+    { href: "/jugando-y-ganando", label: "Jugando y Ganando", icon: Ticket },
     { href: "/leaderboard", label: "Ranking", icon: Trophy },
     { href: "/profile", label: "Perfil", icon: User },
     ...(user.role === "admin" ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),

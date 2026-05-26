@@ -15,6 +15,7 @@ import Profile from "./pages/profile";
 import WalletPage from "./pages/wallet";
 import RifasPage from "./pages/rifas";
 import RifaDetailPage from "./pages/rifa";
+import JugandoGanandoSplash from "./pages/jugando-y-ganando";
 import AdminRifas from "./pages/admin/rifas";
 import Leaderboard from "./pages/leaderboard";
 import AdminDashboard from "./pages/admin/dashboard";
@@ -76,6 +77,7 @@ function Router() {
       <Route path="/profile"><ProtectedRoute component={Profile} /></Route>
       <Route path="/wallet"><ProtectedRoute component={WalletPage} /></Route>
       <Route path="/roulette"><ProtectedRoute component={Roulette} /></Route>
+      <Route path="/jugando-y-ganando"><ProtectedRoute component={JugandoGanandoSplash} /></Route>
       <Route path="/rifas"><ProtectedRoute component={RifasPage} /></Route>
       <Route path="/rifas/:id"><ProtectedRoute component={RifaDetailPage} /></Route>
       

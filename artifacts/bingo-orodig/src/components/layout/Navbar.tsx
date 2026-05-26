@@ -28,7 +28,7 @@ export function Navbar() {
   const navLinks = user ? [
     { href: "/lobby", label: "Lobby", icon: Gamepad2 },
     { href: "/roulette", label: "Ruleta", icon: CircleDot },
-    { href: "/rifas", label: "Jugando y Ganando", icon: Ticket },
+    { href: "/jugando-y-ganando", label: "Jugando y Ganando", icon: Ticket },
     { href: "/profile", label: "Perfil", icon: User },
     { href: "/leaderboard", label: "Ranking", icon: Trophy },
     ...(user.role === "admin" ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
