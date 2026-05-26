@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { Navbar } from "@/components/layout/Navbar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -126,6 +126,7 @@ export default function RoulettePage() {
 
     try {
       const data = await apiJson<SpinResult>("/api/roulette/spin", "POST", { bets });
+      resultRef.current = data;
       setResult(data);
       await refreshUser();
     } catch (e: unknown) {
@@ -135,23 +136,24 @@ export default function RoulettePage() {
     }
   };
 
-  const onSpinEnd = () => {
+  const onSpinEnd = useCallback(() => {
     setSpinning(false);
     setShowResult(true);
     setBets([]);
     void loadHistory();
-    if (result) {
-      if (result.totalPayout > 0) {
-        toast.success(`¡Ganaste ${formatCOP(result.totalPayout)}!`, {
-          description: `Número ${result.winningNumber}`,
+    const r = resultRef.current;
+    if (r) {
+      if (r.totalPayout > 0) {
+        toast.success(`¡Ganaste ${formatCOP(r.totalPayout)}!`, {
+          description: `Número ${r.winningNumber}`,
         });
       } else {
-        toast.info(`Salió el ${result.winningNumber}`, {
+        toast.info(`Salió el ${r.winningNumber}`, {
           description: "Mejor suerte en la próxima",
         });
       }
     }
-  };
+  }, [loadHistory]);
 
   if (!user) return null;
 
@@ -186,44 +188,8 @@ export default function RoulettePage() {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 xl:gap-10">
-          {/* Ruleta */}
-          <section className="relative rounded-3xl border border-white/10 bg-gradient-to-b from-card/40 to-black/60 p-6 md:p-8 overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.08)_0%,transparent_70%)] pointer-events-none" />
-            <RouletteWheel
-              winningNumber={result?.winningNumber ?? null}
-              spinning={spinning}
-              onSpinEnd={onSpinEnd}
-            />
-
-            <AnimatePresence>
-              {showResult && result && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="mt-6 text-center"
-                >
-                  <div
-                    className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl border ${
-                      result.totalPayout > 0
-                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
-                        : "bg-white/5 border-white/10 text-white/70"
-                    }`}
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    <span>
-                      {result.totalPayout > 0
-                        ? formatCOPSigned(result.netResult)
-                        : formatCOPSigned(result.netResult)}
-                    </span>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </section>
-
-          {/* Mesa de apuestas */}
-          <section className="space-y-5">
+          {/* Mesa de apuestas primero en móvil */}
+          <section className="space-y-5 order-1 xl:order-2">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-white/50 text-sm mr-1">Ficha:</span>
               {CHIP_PRESETS.filter((c) => !config || (c >= config.minBet && c <= config.maxBet)).map(
@@ -291,7 +257,6 @@ export default function RoulettePage() {
               <p className="text-white/30 text-xs mt-2 text-center">Clic para apostar · clic derecho para quitar</p>
             </div>
 
-            {/* Apuestas activas */}
             {bets.length > 0 && (
               <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
                 <div className="flex justify-between items-center mb-3">
@@ -312,7 +277,7 @@ export default function RoulettePage() {
                       className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-black/50 border border-white/10 text-sm"
                     >
                       <span
-                        className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white`}
+                        className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold text-white"
                         style={{ backgroundColor: COLOR_BG[numberColor(b.number)] }}
                       >
                         {b.number}
@@ -332,6 +297,42 @@ export default function RoulettePage() {
             >
               {spinning ? "Girando..." : `Girar · ${formatCOP(totalBet)}`}
             </Button>
+          </section>
+
+          {/* Ruleta */}
+          <section className="relative rounded-3xl border border-white/10 bg-gradient-to-b from-card/40 to-black/60 p-6 md:p-8 overflow-hidden order-2 xl:order-1">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.08)_0%,transparent_70%)] pointer-events-none" />
+            <RouletteWheel
+              winningNumber={result?.winningNumber ?? null}
+              spinning={spinning}
+              onSpinEnd={onSpinEnd}
+            />
+
+            <AnimatePresence>
+              {showResult && result && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="mt-6 text-center"
+                >
+                  <div
+                    className={`inline-flex items-center gap-3 px-6 py-3 rounded-2xl border ${
+                      result.totalPayout > 0
+                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                        : "bg-white/5 border-white/10 text-white/70"
+                    }`}
+                  >
+                    <Sparkles className="w-5 h-5" />
+                    <span>
+                      {result.totalPayout > 0
+                        ? formatCOPSigned(result.netResult)
+                        : formatCOPSigned(result.netResult)}
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </section>
         </div>
 

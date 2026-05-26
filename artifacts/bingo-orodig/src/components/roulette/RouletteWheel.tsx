@@ -29,7 +29,10 @@ type Props = {
 
 export function RouletteWheel({ winningNumber, spinning, onSpinEnd }: Props) {
   const [rotation, setRotation] = useState(0);
-  const baseRef = useRef(0);
+  const onSpinEndRef = useRef(onSpinEnd);
+  const spinningRef = useRef(spinning);
+  onSpinEndRef.current = onSpinEnd;
+  spinningRef.current = spinning;
 
   useEffect(() => {
     if (!spinning || winningNumber == null) return;
@@ -38,9 +41,7 @@ export function RouletteWheel({ winningNumber, spinning, onSpinEnd }: Props) {
     const spins = 5 + Math.floor(Math.random() * 3);
     const target =
       spins * 360 + (360 - safeIdx * SEG_ANGLE - SEG_ANGLE / 2);
-    const next = baseRef.current + target;
-    baseRef.current = next % 360;
-    setRotation(next);
+    setRotation((prev) => prev + target);
   }, [spinning, winningNumber]);
 
   const cx = 200;
@@ -57,10 +58,17 @@ export function RouletteWheel({ winningNumber, spinning, onSpinEnd }: Props) {
 
       <motion.div
         className="w-full h-full"
+        style={{ transformOrigin: "50% 50%" }}
         animate={{ rotate: rotation }}
-        transition={{ duration: 4.2, ease: [0.12, 0.8, 0.2, 1] }}
+        transition={
+          spinning
+            ? { duration: 4.2, ease: [0.12, 0.8, 0.2, 1] }
+            : { duration: 0 }
+        }
         onAnimationComplete={() => {
-          if (spinning && winningNumber != null) onSpinEnd?.();
+          if (spinningRef.current && winningNumber != null) {
+            onSpinEndRef.current?.();
+          }
         }}
       >
         <svg viewBox="0 0 400 400" className="w-full h-full drop-shadow-[0_0_40px_rgba(0,0,0,0.6)]">
