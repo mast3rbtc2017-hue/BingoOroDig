@@ -1,8 +1,10 @@
 import { auth } from "./firebase";
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)
-  ?.trim()
-  .replace(/\/+$/, "") ?? "";
+const DEFAULT_PROD_API = "https://bingoorodig-api.onrender.com";
+
+const API_BASE =
+  (import.meta.env.VITE_API_URL as string | undefined)?.trim().replace(/\/+$/, "") ||
+  (import.meta.env.PROD ? DEFAULT_PROD_API : "");
 
 export function apiUrl(path: string): string {
   if (path.startsWith("http")) return path;

@@ -1,49 +1,82 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 
 /** Archivo en `public/Juega.mp4` (se sirve como /Juega.mp4 en hosting) */
 const VIDEO_SRC = "/Juega.mp4";
 
+function prepareVideoForAutoplay(v: HTMLVideoElement) {
+  v.muted = true;
+  v.defaultMuted = true;
+  v.volume = 0;
+  v.playsInline = true;
+  v.setAttribute("playsinline", "");
+  v.setAttribute("webkit-playsinline", "");
+}
+
 export default function JugandoGanandoSplash() {
   const [, setLocation] = useLocation();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playingRef = useRef(false);
   const [videoError, setVideoError] = useState(false);
-  const [needsTap, setNeedsTap] = useState(false);
 
   const goToRifas = useCallback(() => setLocation("/rifas"), [setLocation]);
 
   const tryPlay = useCallback(async () => {
     const v = videoRef.current;
-    if (!v) return;
+    if (!v || playingRef.current) return;
+    prepareVideoForAutoplay(v);
     try {
-      v.muted = true;
       await v.play();
-      setNeedsTap(false);
+      playingRef.current = true;
     } catch {
-      setNeedsTap(true);
+      // Reintentos silenciosos; el navegador suele permitir muted autoplay tras cargar datos.
     }
   }, []);
 
-  useEffect(() => {
+  const bindVideo = useCallback(
+    (node: HTMLVideoElement | null) => {
+      videoRef.current = node;
+      if (!node) return;
+      prepareVideoForAutoplay(node);
+      void node.play().catch(() => undefined);
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
     void tryPlay();
   }, [tryPlay]);
 
-  const handleLoaded = () => {
-    void tryPlay();
-  };
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
 
-  const handleTapToPlay = () => {
-    void tryPlay();
-  };
+    const events = ["loadedmetadata", "loadeddata", "canplay", "canplaythrough"] as const;
+    const onReady = () => void tryPlay();
+
+    events.forEach((e) => v.addEventListener(e, onReady));
+    const retry = window.setInterval(() => void tryPlay(), 400);
+    const stopRetry = window.setTimeout(() => window.clearInterval(retry), 4000);
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void tryPlay();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      events.forEach((e) => v.removeEventListener(e, onReady));
+      window.clearInterval(retry);
+      window.clearTimeout(stopRetry);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [tryPlay]);
 
   if (videoError) {
     return (
       <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black p-6 text-center">
         <p className="text-white/90 text-base max-w-md">
-          No se pudo cargar el video. Asegúrate de tener el archivo{" "}
-          <span className="text-primary font-mono text-sm">Juega.mp4</span> en la carpeta{" "}
-          <span className="text-white/60 text-xs">artifacts/bingo-orodig/public/</span>
+          No se pudo reproducir el video de introducción. Puedes continuar a la sección.
         </p>
         <Button
           type="button"
@@ -66,30 +99,22 @@ export default function JugandoGanandoSplash() {
 
       <div className="jugando-splash-root fixed inset-0 z-[100] bg-black">
         <video
-          ref={videoRef}
+          ref={bindVideo}
           className="absolute inset-0 h-full w-full object-cover bg-black"
           src={VIDEO_SRC}
           autoPlay
           muted
+          defaultMuted
           playsInline
           preload="auto"
           disablePictureInPicture
           disableRemotePlayback
-          onLoadedData={handleLoaded}
-          onCanPlay={handleLoaded}
+          onPlaying={() => {
+            playingRef.current = true;
+          }}
           onEnded={goToRifas}
           onError={() => setVideoError(true)}
         />
-
-        {needsTap && (
-          <button
-            type="button"
-            className="absolute inset-0 z-[1] flex items-center justify-center bg-black/40 text-white/90 text-lg font-medium"
-            onClick={handleTapToPlay}
-          >
-            Toca la pantalla para reproducir
-          </button>
-        )}
       </div>
     </>
   );

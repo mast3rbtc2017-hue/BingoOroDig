@@ -60,6 +60,7 @@ export default function RoulettePage() {
   const [result, setResult] = useState<SpinResult | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [history, setHistory] = useState<HistoryRow[]>([]);
+  const resultRef = useRef<SpinResult | null>(null);
 
   const loadConfig = useCallback(async () => {
     const c = await apiJson<RouletteConfig & { enabled: boolean }>("/api/roulette/config", "GET");
@@ -82,6 +83,7 @@ export default function RoulettePage() {
   }, [loadConfig, loadHistory]);
 
   const totalBet = useMemo(() => bets.reduce((s, b) => s + b.amount, 0), [bets]);
+  const insufficientBalance = (user.balance ?? 0) < totalBet;
 
   const addBet = (n: number) => {
     if (!config || spinning) return;
@@ -286,16 +288,27 @@ export default function RoulettePage() {
                     </span>
                   ))}
                 </div>
-                <p className="text-accent font-bold mt-3 text-right">Total: {formatCOP(totalBet)}</p>
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <p className="text-accent font-bold">Total: {formatCOP(totalBet)}</p>
+                  {insufficientBalance && (
+                    <p className="text-xs text-red-400 font-medium text-right">
+                      Saldo insuficiente para esta jugada
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
             <Button
               onClick={() => void handleSpin()}
-              disabled={spinning || !bets.length || !config?.enabled}
+              disabled={spinning || !bets.length || !config?.enabled || insufficientBalance}
               className="w-full h-14 text-lg font-bold bg-gradient-to-r from-primary to-accent text-black hover:scale-[1.01] transition-transform shadow-[0_0_24px_rgba(212,175,55,0.35)] disabled:opacity-40"
             >
-              {spinning ? "Girando..." : `Girar · ${formatCOP(totalBet)}`}
+              {spinning
+                ? "Girando..."
+                : insufficientBalance
+                  ? "Saldo insuficiente"
+                  : `Girar · ${formatCOP(totalBet)}`}
             </Button>
           </section>
 

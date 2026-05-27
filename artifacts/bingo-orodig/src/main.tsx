@@ -4,9 +4,11 @@ import App from "./App";
 import "./index.css";
 import "./lib/firebase";
 
-const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
-if (apiUrl?.trim()) {
-  setBaseUrl(apiUrl.trim().replace(/\/+$/, ""));
+const apiUrl =
+  (import.meta.env.VITE_API_URL as string | undefined)?.trim() ||
+  (import.meta.env.PROD ? "https://bingoorodig-api.onrender.com" : "");
+if (apiUrl) {
+  setBaseUrl(apiUrl.replace(/\/+$/, ""));
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
